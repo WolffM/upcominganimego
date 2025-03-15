@@ -5,8 +5,10 @@ import { useAnime, SortOption } from '@/hooks/useAnime';
 import { AnimeGrid } from '@/components/AnimeGrid';
 import { Pagination } from '@/components/Pagination';
 import { SortSelector } from '@/components/SortSelector';
+import { FilterBar } from '@/components/FilterBar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { NoDataView } from '@/components/NoDataView';
 import { formatSeasonTitle } from '@/utils/uiHelpers';
 import { COMMON_STYLES, PAGE_STYLES } from '@/utils/uiStyles';
 
@@ -33,7 +35,11 @@ export default function Home() {
     sortOption,
     setSortOption,
     showPagination,
-    filteredList
+    filteredList,
+    filters,
+    updateFilters,
+    availableGenres,
+    isLoading
   } = useAnime(1, itemsPerPage);
 
   // Use useEffect to handle client-side only code
@@ -70,6 +76,12 @@ export default function Home() {
   const handleSortChange = (option: SortOption) => {
     console.log('🔄 Sort option changed to:', option);
     setSortOption(option);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (newFilters: any) => {
+    console.log('🔍 Filter options changed:', newFilters);
+    updateFilters(newFilters);
   };
 
   // Handle retry
@@ -110,66 +122,73 @@ export default function Home() {
 
   // Season title formatting
   const seasonTitle = formatSeasonTitle(
-    seasonInfo?.season,
-    seasonInfo?.year
+    filters.season,
+    filters.year
   );
 
   console.log('🎬 Rendering main content with', anime.length, 'anime', filteredList ? '(filtered)' : '(not filtered yet)');
 
   return (
     <div className={PAGE_STYLES.CONTAINER}>
-      <header className={PAGE_STYLES.HEADER}>
-        <div className={PAGE_STYLES.HEADER_CONTAINER}>
-          <h1 className={PAGE_STYLES.TITLE}>
-            {seasonTitle}
-          </h1>
-          <p className={PAGE_STYLES.SUBTITLE}>
-            Discover upcoming anime releases with trailers
-          </p>
-        </div>
-      </header>
-
       <main className={COMMON_STYLES.CONTAINER}>
-        {/* Sorting Controls */}
-        <div className={PAGE_STYLES.CONTROLS_ROW}>
-          <h2 className={PAGE_STYLES.SECTION_TITLE}>
-            {anime.length > 0 ? `Showing ${anime.length} anime` : 'No anime found'}
-          </h2>
-          <SortSelector 
-            currentSort={sortOption} 
-            onSortChange={handleSortChange} 
-          />
-        </div>
+        {/* Filter Bar */}
+        <FilterBar 
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          availableGenres={availableGenres}
+          isLoading={isLoading}
+        />
         
-        {/* Anime Grid */}
-        <div className={PAGE_STYLES.GRID_CONTAINER}>
-          <AnimeGrid anime={anime} loading={loading} />
-        </div>
-        
-        {/* Loading indicator for page changes */}
-        {loading && anime.length > 0 && (
-          <div className={PAGE_STYLES.LOADING_INDICATOR}>
-            <LoadingSpinner message="Loading more anime..." />
-          </div>
-        )}
-        
-        {/* Filtering indicator */}
-        {!loading && anime.length > 0 && !filteredList && (
-          <div className={PAGE_STYLES.LOADING_INDICATOR}>
-            <LoadingSpinner message="Filtering anime by season..." />
-          </div>
-        )}
-        
-        {/* Pagination */}
-        {showPagination && (
-          <Pagination 
-            currentPage={page} 
-            totalPages={totalPages} 
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            onNextPage={goToNextPage}
-            onPreviousPage={goToPreviousPage}
-            onPageSelect={goToPage}
+        {/* Show content only if we have anime or are still loading */}
+        {(anime.length > 0 || loading) ? (
+          <>
+            {/* Sorting Controls */}
+            <div className={PAGE_STYLES.CONTROLS_ROW}>
+              <h1 className={PAGE_STYLES.TITLE}>
+                {seasonTitle}
+              </h1>
+              <SortSelector 
+                currentSort={sortOption} 
+                onSortChange={handleSortChange} 
+              />
+            </div>
+            
+            {/* Anime Grid */}
+            <div className={PAGE_STYLES.GRID_CONTAINER}>
+              <AnimeGrid anime={anime} loading={loading} />
+            </div>
+            
+            {/* Loading indicator for page changes */}
+            {loading && anime.length > 0 && (
+              <div className={PAGE_STYLES.LOADING_INDICATOR}>
+                <LoadingSpinner message="Loading more anime..." />
+              </div>
+            )}
+            
+            {/* Filtering indicator */}
+            {!loading && anime.length > 0 && !filteredList && (
+              <div className={PAGE_STYLES.LOADING_INDICATOR}>
+                <LoadingSpinner message="Filtering anime by season..." />
+              </div>
+            )}
+            
+            {/* Pagination */}
+            {showPagination && (
+              <Pagination 
+                currentPage={page} 
+                totalPages={totalPages} 
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
+                onNextPage={goToNextPage}
+                onPreviousPage={goToPreviousPage}
+                onPageSelect={goToPage}
+              />
+            )}
+          </>
+        ) : (
+          /* No Data View */
+          <NoDataView 
+            filters={filters}
           />
         )}
       </main>

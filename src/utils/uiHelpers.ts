@@ -1,4 +1,5 @@
 import { Anime } from '@/types/anime';
+import { AnimeSeason } from '@/services/anilistService';
 
 /**
  * Interface for loading state elements
@@ -33,11 +34,11 @@ export const countAnimeWithTrailers = (animeList: Anime[]): number => {
 
 /**
  * Format season title for display
- * @param season Season name
+ * @param season Season name or AnimeSeason enum
  * @param year Year number
  * @returns Formatted season title
  */
-export const formatSeasonTitle = (season: string | null | undefined, year: number | null | undefined): string => {
+export const formatSeasonTitle = (season: string | AnimeSeason | null | undefined, year: number | null | undefined): string => {
   if (!season || !year) return 'Upcoming Anime';
   
   const capitalizedSeason = season.charAt(0).toUpperCase() + season.slice(1).toLowerCase();

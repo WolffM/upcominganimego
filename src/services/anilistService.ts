@@ -13,7 +13,7 @@ export enum AnimeSeason {
 
 // GraphQL query to fetch upcoming anime with trailers
 const UPCOMING_ANIME_QUERY = gql`
-  query UpcomingAnime($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $sort: [MediaSort]) {
+  query UpcomingAnime($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $sort: [MediaSort], $format_in: [MediaFormat], $genre_in: [String]) {
     Page(page: $page, perPage: $perPage) {
       pageInfo {
         total
@@ -24,7 +24,8 @@ const UPCOMING_ANIME_QUERY = gql`
       }
       media(
         type: ANIME
-        format_in: [TV, MOVIE, OVA]
+        format_in: $format_in
+        genre_in: $genre_in
         season: $season
         seasonYear: $seasonYear
         sort: $sort
@@ -175,18 +176,22 @@ interface AnilistApiResponse {
 }
 
 /**
- * Fetch upcoming anime from AniList API
+ * Fetches upcoming anime from AniList API
  * @param page Page number to fetch
  * @param perPage Number of items per page
  * @param targetSeason Optional specific season to fetch
  * @param targetYear Optional specific year to fetch
+ * @param format Optional specific format to fetch (TV, MOVIE, OVA, etc)
+ * @param genre Optional specific genre to fetch
  * @returns Promise with anime response data
  */
 export const fetchUpcomingAnime = async (
   page = 1, 
   perPage = 20,
   targetSeason?: AnimeSeason,
-  targetYear?: number
+  targetYear?: number,
+  format?: string | null,
+  genre?: string | null
 ): Promise<AnimeResponse> => {
   try {
     // Use provided season/year or get the next season
@@ -194,7 +199,8 @@ export const fetchUpcomingAnime = async (
       ? { season: targetSeason, year: targetYear }
       : getNextSeason();
     
-    const variables = {
+    // Prepare variables for the GraphQL query
+    const variables: any = {
       page,
       perPage,
       season,
@@ -202,8 +208,33 @@ export const fetchUpcomingAnime = async (
       sort: ['POPULARITY_DESC', 'START_DATE']
     };
     
+    // Add format filter if provided
+    if (format && format !== 'all') {
+      // Pass as an array with a single value
+      variables.format_in = [format];
+      console.log('🔍 Adding format filter:', format);
+    } else {
+      // If no specific format is requested, include all common formats
+      variables.format_in = ['TV', 'MOVIE', 'OVA', 'ONA', 'SPECIAL'];
+      console.log('🔍 Using default formats');
+    }
+    
+    // Add genre filter if provided
+    if (genre && genre !== 'all') {
+      variables.genre_in = [genre]; // Pass as an array
+      console.log('🔍 Adding genre filter:', genre);
+    }
+    
+    console.log('📊 Fetching anime with variables:', JSON.stringify(variables, null, 2));
+    
     // Get the direct response from the API
     const directResponse = await request<AnilistApiResponse>(ANILIST_API_URL, UPCOMING_ANIME_QUERY, variables);
+    
+    // Log the raw response for debugging
+    console.log('📊 Raw API response:', JSON.stringify({
+      pageInfo: directResponse.Page.pageInfo,
+      mediaCount: directResponse.Page.media.length
+    }, null, 2));
     
     // Validate response structure
     if (!directResponse || typeof directResponse !== 'object') {

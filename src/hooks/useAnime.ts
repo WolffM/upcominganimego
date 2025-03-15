@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchUpcomingAnime } from '@/services/anilistService';
+import { fetchUpcomingAnime, AnimeSeason, getNextSeason, getCurrentSeason } from '@/services/anilistService';
 import { Anime } from '@/types/anime';
 
 // Define a type for season information
@@ -14,8 +14,20 @@ export enum SortOption {
   RELEASE_DATE = 'releaseDate',
 }
 
+// Define filter options
+export interface FilterOptions {
+  genre: string | null;
+  format: string | null;
+  searchQuery: string;
+  year: number;
+  season: AnimeSeason;
+}
+
 // Reasonable limit for pagination display
 const MAX_REASONABLE_PAGES = 10;
+
+// Default formats available in AniList
+export const ANIME_FORMATS = ['TV', 'MOVIE', 'OVA', 'ONA', 'SPECIAL', 'MUSIC'];
 
 export const useAnime = (initialPage = 1, perPage = 20) => {
   // Core state
@@ -26,6 +38,21 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>(SortOption.POPULARITY);
   const [filteredList, setFilteredList] = useState<boolean>(false);
+  
+  // New filter state
+  const [filters, setFilters] = useState<FilterOptions>(() => {
+    const nextSeason = getNextSeason();
+    return {
+      genre: null,
+      format: null,
+      searchQuery: '',
+      year: nextSeason.year,
+      season: nextSeason.season,
+    };
+  });
+  
+  // Available genres from fetched anime
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   
   // Pagination state
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
@@ -52,93 +79,10 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     return calculatedPages;
   }, []);
   
-  // Function to fetch anime data
-  const fetchAnimeData = useCallback(async () => {
-    if (!isMountedRef.current) return;
-    
-    try {
-      console.log('🔄 Fetching anime data for page:', page, 'with perPage:', perPage);
-      setLoading(true);
-      setFilteredList(false);
-      setError(null);
-      
-      const response = await fetchUpcomingAnime(page, perPage);
-      
-      if (!isMountedRef.current) return;
-      
-      // Validate response structure
-      if (!response?.data?.Page?.media) {
-        throw new Error('Invalid API response structure');
-      }
-      
-      // Store the original anime list
-      originalAnimeRef.current = response.data.Page.media;
-      console.log('📊 Received anime count:', response.data.Page.media.length);
-      
-      // Apply sorting based on the current sort option
-      const sortedAnime = sortAnimeList(sortOption);
-      setAnime(sortedAnime);
-      
-      // Extract pagination info from API response
-      const pageInfo = response.data.Page.pageInfo;
-      console.log('📄 API pagination info:', {
-        hasNextPage: pageInfo.hasNextPage,
-        currentPage: page,
-        lastPage: pageInfo.lastPage,
-        total: pageInfo.total
-      });
-      
-      // Set pagination state
-      const apiHasNextPage = pageInfo.hasNextPage || false;
-      setHasNextPage(apiHasNextPage);
-      setHasPreviousPage(page > 1);
-      
-      // Calculate total pages
-      if (sortedAnime.length > 0) {
-        const calculatedPages = calculateTotalPages(page, apiHasNextPage);
-        setTotalPages(calculatedPages);
-      } else {
-        console.log('❌ No anime data, setting totalPages to 0');
-        setTotalPages(0);
-      }
-      
-      // Extract season information from the first anime if available
-      if (response.data.Page.media.length > 0) {
-        const firstAnime = response.data.Page.media[0];
-        if (firstAnime.season && firstAnime.seasonYear) {
-          setSeasonInfo({
-            season: firstAnime.season,
-            year: firstAnime.seasonYear
-          });
-        }
-      }
-      
-      // Mark the list as filtered after a short delay to ensure all state updates have been processed
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          console.log('✅ Anime list filtered and ready');
-          setFilteredList(true);
-        }
-      }, 100);
-    } catch (err) {
-      console.error('❌ Error fetching anime data:', err);
-      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-      setAnime([]);
-      setHasNextPage(false);
-      setHasPreviousPage(false);
-      setTotalPages(0);
-      setFilteredList(false);
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [page, perPage, sortOption, calculateTotalPages]);
-
   // Function to sort anime list based on sort option
-  const sortAnimeList = useCallback((option: SortOption): Anime[] => {
+  const sortAnimeList = useCallback((option: SortOption, animeList?: Anime[]): Anime[] => {
     // Create a copy to avoid mutating the original
-    const sortedList = [...originalAnimeRef.current];
+    const sortedList = [...(animeList || originalAnimeRef.current)];
     
     switch (option) {
       case SortOption.POPULARITY:
@@ -172,24 +116,162 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
         return sortedList;
     }
   }, []);
+  
+  // Function to apply client-side filters (search query)
+  const applyClientSideFilters = useCallback((animeList: Anime[]): Anime[] => {
+    // First apply sorting
+    let result = sortAnimeList(sortOption, animeList);
+    
+    // Then apply search query filter if it exists
+    if (filters.searchQuery.trim()) {
+      const query = filters.searchQuery.toLowerCase().trim();
+      result = result.filter(anime => {
+        // Search in title
+        const titleMatch = 
+          (anime.title.english && anime.title.english.toLowerCase().includes(query)) ||
+          (anime.title.romaji && anime.title.romaji.toLowerCase().includes(query)) ||
+          (anime.title.native && anime.title.native.toLowerCase().includes(query));
+        
+        // Search in description
+        const descriptionMatch = 
+          anime.description && anime.description.toLowerCase().includes(query);
+        
+        return titleMatch || descriptionMatch;
+      });
+    }
+    
+    return result;
+  }, [filters.searchQuery, sortOption, sortAnimeList]);
+  
+  // Function to fetch anime data
+  const fetchAnimeData = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      console.log('🔄 Fetching anime data for page:', page, 'with perPage:', perPage);
+      console.log('🔍 Using filters:', JSON.stringify(filters, null, 2));
+      
+      // Set loading state before fetching
+      setLoading(true);
+      setFilteredList(false);
+      setError(null);
+      
+      // Fetch data from API
+      console.log('📊 Calling fetchUpcomingAnime with season:', filters.season, 'year:', filters.year);
+      const response = await fetchUpcomingAnime(
+        page, 
+        perPage, 
+        filters.season,
+        filters.year,
+        filters.format,
+        filters.genre
+      );
+      
+      if (!isMountedRef.current) return;
+      
+      // Validate response structure
+      if (!response?.data?.Page?.media) {
+        throw new Error('Invalid API response structure');
+      }
+      
+      // Store the original anime list
+      originalAnimeRef.current = response.data.Page.media;
+      console.log('📊 Received anime count:', response.data.Page.media.length);
+      
+      // Extract all unique genres from the fetched anime
+      const genres = new Set<string>();
+      response.data.Page.media.forEach(anime => {
+        if (anime.genres && Array.isArray(anime.genres)) {
+          anime.genres.forEach(genre => {
+            if (genre) genres.add(genre);
+          });
+        }
+      });
+      setAvailableGenres(Array.from(genres).sort());
+      
+      // Apply sorting and filtering
+      const filteredAnime = applyClientSideFilters(response.data.Page.media);
+      setAnime(filteredAnime);
+      
+      // Extract pagination info from API response
+      const pageInfo = response.data.Page.pageInfo;
+      console.log('📄 API pagination info:', {
+        hasNextPage: pageInfo.hasNextPage,
+        currentPage: page,
+        lastPage: pageInfo.lastPage,
+        total: pageInfo.total
+      });
+      
+      // Set pagination state
+      const apiHasNextPage = pageInfo.hasNextPage || false;
+      setHasNextPage(apiHasNextPage);
+      setHasPreviousPage(page > 1);
+      
+      // Calculate total pages
+      if (filteredAnime.length > 0) {
+        const calculatedPages = calculateTotalPages(page, apiHasNextPage);
+        setTotalPages(calculatedPages);
+      } else {
+        console.log('❌ No anime data, setting totalPages to 0');
+        setTotalPages(0);
+      }
+      
+      // Extract season information from the first anime if available
+      if (response.data.Page.media.length > 0) {
+        const firstAnime = response.data.Page.media[0];
+        if (firstAnime.season && firstAnime.seasonYear) {
+          setSeasonInfo({
+            season: firstAnime.season,
+            year: firstAnime.seasonYear
+          });
+        }
+      }
+      
+      // Mark the list as filtered and set loading to false
+      setFilteredList(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('❌ Error fetching anime data:', err);
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      setAnime([]);
+      setHasNextPage(false);
+      setHasPreviousPage(false);
+      setTotalPages(0);
+      setFilteredList(true); // Set to true so we show the "no data" view instead of loading
+      setLoading(false); // Ensure loading is set to false on error
+    }
+  }, [page, perPage, filters, calculateTotalPages, applyClientSideFilters]);
 
   // Effect to handle sort option changes
   useEffect(() => {
     if (originalAnimeRef.current.length > 0) {
       console.log('🔄 Re-sorting anime list with option:', sortOption);
-      // Re-sort the anime list when the sort option changes
-      const sortedAnime = sortAnimeList(sortOption);
-      setAnime(sortedAnime);
+      // Re-sort and filter the anime list
+      const filteredAnime = applyClientSideFilters(originalAnimeRef.current);
+      setAnime(filteredAnime);
       
       // Mark the list as filtered after sorting
       setFilteredList(true);
     }
-  }, [sortOption, sortAnimeList]);
+  }, [sortOption, applyClientSideFilters]);
 
-  // Effect to fetch data when page or perPage changes
+  // Effect to handle search query changes
+  useEffect(() => {
+    if (originalAnimeRef.current.length > 0) {
+      console.log('🔍 Filtering anime list with search query:', filters.searchQuery);
+      // Apply client-side filters
+      const filteredAnime = applyClientSideFilters(originalAnimeRef.current);
+      setAnime(filteredAnime);
+      
+      // Mark the list as filtered after filtering
+      setFilteredList(true);
+    }
+  }, [filters.searchQuery, applyClientSideFilters]);
+
+  // Effect to fetch data when page, perPage, or server-side filters change
   useEffect(() => {
     fetchAnimeData();
-  }, [page, perPage, fetchAnimeData]);
+  }, [page, perPage, filters.season, filters.year, filters.genre, filters.format, fetchAnimeData]);
   
   // Effect to handle component unmount
   useEffect(() => {
@@ -220,6 +302,14 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     }
   }, [totalPages]);
 
+  // Filter update functions
+  const updateFilters = useCallback((newFilters: Partial<FilterOptions>) => {
+    console.log('🔄 Updating filters:', newFilters);
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    // Reset to page 1 when filters change
+    setPage(1);
+  }, []);
+
   // Retry function
   const retry = useCallback(() => {
     console.log('🔄 Retrying data fetch');
@@ -239,9 +329,10 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
       totalPages,
       hasNextPage,
       hasPreviousPage,
-      showPagination
+      showPagination,
+      filters
     });
-  }, [loading, filteredList, anime.length, page, totalPages, hasNextPage, hasPreviousPage, showPagination]);
+  }, [loading, filteredList, anime.length, page, totalPages, hasNextPage, hasPreviousPage, showPagination, filters]);
 
   return {
     // Data
@@ -253,9 +344,12 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     seasonInfo,
     sortOption,
     filteredList,
+    filters,
+    availableGenres,
     
     // Actions
     setSortOption,
+    updateFilters,
     goToNextPage,
     goToPreviousPage,
     goToPage,
@@ -264,6 +358,7 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     // Computed
     hasNextPage,
     hasPreviousPage,
-    showPagination
+    showPagination,
+    isLoading: loading
   };
 };
