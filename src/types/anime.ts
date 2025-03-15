@@ -1,3 +1,4 @@
+// Main anime data interfaces
 export interface Anime {
   id: number;
   title: {
@@ -70,19 +71,136 @@ export interface Anime {
       };
     }[];
   };
+  // User rating information if available
+  userRating?: number;
 }
 
+// API response interfaces
 export interface AnimeResponse {
   data: {
     Page: {
       media: Anime[];
-      pageInfo: {
-        total: number;
-        currentPage: number;
-        lastPage: number;
-        hasNextPage: boolean;
-        perPage: number;
-      };
+      pageInfo: PageInfo;
     };
   };
-} 
+}
+
+export interface PageInfo {
+  total: number;
+  currentPage: number;
+  lastPage: number;
+  hasNextPage: boolean;
+  perPage: number;
+}
+
+// User ratings interfaces
+export interface UserRatingEntry {
+  id: number;
+  mediaId: number;
+  score: number;
+  media: Anime;
+}
+
+export interface UserRatingsResponse {
+  data: {
+    Page: {
+      mediaList: UserRatingEntry[];
+      pageInfo: PageInfo;
+    }
+  };
+}
+
+// API data structure interfaces
+export interface AnilistApiResponse {
+  Page: {
+    pageInfo: PageInfo;
+    media: any[];
+  };
+}
+
+export interface GraphQLUserRatingsResponse {
+  Page: {
+    mediaList: any[];
+    pageInfo: PageInfo;
+  };
+}
+
+export interface UserQueryResponse {
+  User: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+// Cache-related interfaces
+export interface AnimeCacheKey {
+  season: AnimeSeason;
+  year: number;
+  page: number;
+  perPage: number;
+}
+
+export interface UserRatingsCacheKey {
+  userId: number;
+  page: number;
+  perPage: number;
+}
+
+export type CacheKey = AnimeCacheKey | UserRatingsCacheKey;
+
+export interface CacheEntry {
+  data: AnimeResponse | UserRatingsResponse;
+  timestamp: number;
+}
+
+// Filter and sort interfaces
+export interface SeasonInfo {
+  season: string;
+  year: number;
+}
+
+export interface FilterOptions {
+  genre: string | null;
+  format: string | null;
+  searchQuery: string;
+  year: number;
+  season: AnimeSeason;
+}
+
+// Enums
+export enum AnimeSeason {
+  WINTER = 'WINTER',
+  SPRING = 'SPRING',
+  SUMMER = 'SUMMER',
+  FALL = 'FALL'
+}
+
+export enum SortOption {
+  POPULARITY = 'popularity',
+  RELEASE_DATE = 'releaseDate',
+}
+
+// User ratings statistics interface
+export interface RatingStats {
+  count: number;
+  averageScore: number;
+  highestRated: {
+    anime: Anime;
+    score: number;
+  } | null;
+  lowestRated: {
+    anime: Anime;
+    score: number;
+  } | null;
+  preferredGenres: Array<{
+    genre: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+// Constants
+export const ANIME_FORMATS = ['TV', 'MOVIE', 'OVA', 'ONA', 'SPECIAL', 'MUSIC'];
+export const MAX_REASONABLE_PAGES = 10;
+export const MAX_PAGE_SIZE = 50; // Maximum supported by AniList API
+export const MAX_PAGES_TO_FETCH = 10; // Safety limit to prevent excessive API calls 

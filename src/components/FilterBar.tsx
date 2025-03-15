@@ -32,14 +32,15 @@ export const FilterBar = ({
   
   // Track loading state changes
   useEffect(() => {
+    console.log('🔄 FilterBar: isLoading changed to', isLoading);
+    
     if (isLoading) {
+      console.log('🔄 FilterBar: Setting localLoading to true');
       setLocalLoading(true);
     } else {
-      // Add a small delay before removing loading state to prevent flickering
-      const timer = setTimeout(() => {
-        setLocalLoading(false);
-      }, 300);
-      return () => clearTimeout(timer);
+      console.log('🔄 FilterBar: Setting localLoading to false immediately');
+      // Remove the delay - this was causing the UI to stay in loading state too long
+      setLocalLoading(false);
     }
   }, [isLoading]);
   
@@ -47,6 +48,7 @@ export const FilterBar = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchValue !== filters.searchQuery) {
+        console.log('🔍 FilterBar: Search query changed to', searchValue);
         onFilterChange({ searchQuery: searchValue });
       }
     }, 300);
@@ -61,34 +63,69 @@ export const FilterBar = ({
   
   // Handle genre selection
   const handleGenreChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLocalLoading(true); // Set local loading state immediately
-    const value = e.target.value === 'all' ? null : e.target.value;
+    const selectedValue = e.target.value;
+    const value = selectedValue === 'all' ? null : selectedValue;
+    console.log('🔄 FilterBar: Genre changed to', value, 'from dropdown value', selectedValue);
+    console.log('🔄 FilterBar: Current filters before change:', filters);
+    
+    // Don't set localLoading here - let the parent component control the loading state
+    // setLocalLoading(true);
+    
+    // Call the filter change handler immediately
+    console.log('🔄 FilterBar: Calling onFilterChange with genre:', value);
     onFilterChange({ genre: value });
-  }, [onFilterChange]);
+  }, [onFilterChange, filters]);
   
   // Handle format selection
   const handleFormatChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLocalLoading(true); // Set local loading state immediately
     const value = e.target.value === 'all' ? null : e.target.value;
+    console.log('🔄 FilterBar: Format changed to', value);
+    
+    // Don't set localLoading here - let the parent component control the loading state
+    // setLocalLoading(true);
+    
+    // Call the filter change handler immediately
     onFilterChange({ format: value });
   }, [onFilterChange]);
   
   // Handle year selection
   const handleYearChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLocalLoading(true); // Set local loading state immediately
     const value = parseInt(e.target.value, 10);
+    console.log('🔄 FilterBar: Year changed to', value);
+    
+    // Don't set localLoading here - let the parent component control the loading state
+    // setLocalLoading(true);
+    
+    // Call the filter change handler immediately - no need for setTimeout
     onFilterChange({ year: value });
   }, [onFilterChange]);
   
   // Handle season selection
   const handleSeasonChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLocalLoading(true); // Set local loading state immediately
     const value = e.target.value as AnimeSeason;
+    console.log('🔄 FilterBar: Season changed to', value);
+    
+    // Don't set localLoading here - let the parent component control the loading state
+    // setLocalLoading(true);
+    
+    // Call the filter change handler immediately - no need for setTimeout
     onFilterChange({ season: value });
   }, [onFilterChange]);
   
   // Determine if controls should be disabled
   const isDisabled = localLoading || isLoading;
+  
+  // Log render state
+  console.log('🔄 FilterBar rendering with states:', { 
+    isLoading, 
+    localLoading, 
+    isDisabled,
+    filters
+  });
+  
+  // Debug the genre dropdown value
+  const genreDropdownValue = filters.genre || 'all';
+  console.log('🔄 FilterBar: Genre dropdown value:', genreDropdownValue, 'from filters.genre:', filters.genre);
   
   return (
     <div className="w-full bg-gray-800 p-4 rounded-lg shadow-md mb-6">
@@ -116,7 +153,7 @@ export const FilterBar = ({
           </label>
           <select
             id="genre"
-            value={filters.genre || 'all'}
+            value={genreDropdownValue}
             onChange={handleGenreChange}
             disabled={isDisabled}
             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

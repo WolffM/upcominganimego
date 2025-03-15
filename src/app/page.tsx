@@ -9,12 +9,20 @@ import { FilterBar } from '@/components/FilterBar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { NoDataView } from '@/components/NoDataView';
+import { UserRatingsInput } from '@/components/UserRatingsInput';
+import { Modal } from '@/components/Modal';
 import { formatSeasonTitle } from '@/utils/uiHelpers';
-import { COMMON_STYLES, PAGE_STYLES } from '@/utils/uiStyles';
+import { COMMON_STYLES, PAGE_STYLES, BUTTON_STYLES } from '@/utils/uiStyles';
+import { getCacheStats, clearCache } from '@/services/cacheService';
+import { UserRatingsResponse } from '@/types/anime';
 
 export default function Home() {
   const [itemsPerPage] = useState(24);
   const [mounted, setMounted] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [cacheStats, setCacheStats] = useState({ count: 0, size: 0, keys: [] as string[] });
+  const [userRatings, setUserRatings] = useState<UserRatingsResponse | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
   
   // Log when component renders
   console.log('🏠 Home component rendering');
@@ -46,7 +54,30 @@ export default function Home() {
   useEffect(() => {
     console.log('🔄 Home component mounted');
     setMounted(true);
+    
+    // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDebug(prev => !prev);
+        updateCacheStats();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  
+  // Function to update cache stats
+  const updateCacheStats = () => {
+    const stats = getCacheStats();
+    setCacheStats(stats);
+  };
+  
+  // Function to clear cache
+  const handleClearCache = () => {
+    clearCache();
+    updateCacheStats();
+  };
 
   // Log when pagination state changes
   useEffect(() => {
@@ -88,6 +119,20 @@ export default function Home() {
   const handleRetry = () => {
     console.log('🔄 Retry requested');
     retry();
+  };
+  
+  // Handle user ratings loaded
+  const handleUserRatingsLoaded = (ratings: UserRatingsResponse) => {
+    console.log('👤 User ratings loaded:', ratings.data.Page.mediaList.length, 'entries');
+    setUserRatings(ratings);
+    
+    // TODO: Implement logic to match upcoming anime with user preferences
+    // This will be added in future iterations
+  };
+  
+  // Toggle user modal
+  const toggleUserModal = () => {
+    setShowUserModal(prev => !prev);
   };
 
   // If not mounted yet, show nothing to avoid hydration issues
@@ -145,13 +190,28 @@ export default function Home() {
             {/* Sorting Controls */}
             <div className={PAGE_STYLES.CONTROLS_ROW}>
               <h1 className={PAGE_STYLES.TITLE}>
-                {seasonTitle}
+                {seasonTitle} Anime
               </h1>
-              <SortSelector 
-                currentSort={sortOption} 
-                onSortChange={handleSortChange} 
-              />
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleUserModal}
+                  className={BUTTON_STYLES.PRIMARY}
+                >
+                  {userRatings ? 'Update User Data' : 'Load User Data'}
+                </button>
+                <SortSelector 
+                  currentSort={sortOption} 
+                  onSortChange={handleSortChange} 
+                />
+              </div>
             </div>
+            
+            {/* User data indicator */}
+            {userRatings && (
+              <div className={PAGE_STYLES.USER_DATA_INDICATOR}>
+                <span className={COMMON_STYLES.FONT_MEDIUM}>Personalized for you:</span> Loaded {userRatings.data.Page.mediaList.length} rated anime from your profile
+              </div>
+            )}
             
             {/* Anime Grid */}
             <div className={PAGE_STYLES.GRID_CONTAINER}>
@@ -191,6 +251,19 @@ export default function Home() {
             filters={filters}
           />
         )}
+        
+        {/* User Ratings Modal */}
+        <Modal 
+          isOpen={showUserModal} 
+          onClose={toggleUserModal}
+          title="Personalize Your Experience"
+        >
+          <UserRatingsInput 
+            onRatingsLoaded={handleUserRatingsLoaded} 
+            onClose={toggleUserModal}
+            insideModal={true}
+          />
+        </Modal>
       </main>
     </div>
   );

@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { SortOption } from '@/hooks/useAnime';
+import { SortOption } from '@/types/anime';
 import { SELECTOR_STYLES } from '@/utils/uiStyles';
 
 interface SortSelectorProps {
