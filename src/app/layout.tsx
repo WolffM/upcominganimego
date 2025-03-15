@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { logger } from '@/utils/logger';
 
 export const metadata: Metadata = {
   title: "Upcoming Anime",

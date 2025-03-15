@@ -12,30 +12,6 @@ A web application that displays upcoming anime releases with trailers, built wit
 - Responsive design for all devices
 - Dark mode support
 
-## Ranking System
-
-The application includes a personalized ranking system that considers:
-
-1. **User Preferences**: Ranks anime based on two user profiles (Hadoku and LittleMiss)
-   - Liked studios
-   - Liked directors
-   - Preferred genres
-   - Age rating preferences
-
-2. **General Factors**:
-   - Trailer quality
-   - Popularity
-   - Anticipation based on release date
-   - Genre relevance to current trends
-
-3. **Sorting Options**:
-   - Our Ranking (default): Shows top picks first, then sorts by combined score
-   - Hadoku's Ranking: Sorts by Hadoku's personal score
-   - LittleMiss's Ranking: Sorts by LittleMiss's personal score
-   - Combined Ranking: Sorts by the combined score from both users
-   - Popularity: Sorts by popularity from the AniList API
-   - Release Date: Sorts by upcoming release date
-
 ## Getting Started
 
 ### Prerequisites
@@ -84,49 +60,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [AniList API](https://anilist.gitbook.io/anilist-apiv2-docs/) for providing anime data
 - [Tailwind CSS](https://tailwindcss.com/) for the styling framework
 
-## Environment Variables
-
-The application uses environment variables for configuration. Create a `.env.local` file in the root directory with the following variables:
-
-```
-# Logging configuration
-NEXT_PUBLIC_LOG_LEVEL=info
-NEXT_PUBLIC_LOG_TO_CONSOLE=true
-NEXT_PUBLIC_LOG_TO_SERVER=false
-NEXT_PUBLIC_LOG_COMPONENT_RENDERS=false
-```
-
-### Log Levels
-
-Available log levels (from most to least verbose):
-- `trace`: Most detailed logging
-- `debug`: Debugging information
-- `info`: General information
-- `warn`: Warnings
-- `error`: Errors
-- `fatal`: Critical errors
-
 ## API Integration
 
 This application uses the AniList GraphQL API to fetch anime data. No API key is required for basic usage.
-
-## Testing
-
-Run the test suite with:
-
-```bash
-npm test
-# or
-yarn test
-```
-
-API-specific tests can be run with:
-
-```bash
-npm run test:api
-# or
-yarn test:api
-```
 
 ## Image Fallback System
 

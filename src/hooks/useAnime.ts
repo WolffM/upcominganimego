@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchUpcomingAnime } from '@/services/anilistService';
-import { rankAnimeList } from '@/services/rankingService';
 import { Anime } from '@/types/anime';
-import { logger } from '@/utils/logger';
 
 // Define a type for season information
 interface SeasonInfo {
@@ -12,77 +10,97 @@ interface SeasonInfo {
 
 // Define sort options
 export enum SortOption {
-  RANK = 'rank',
-  HADOKU_RANK = 'hadokuRank',
-  LITTLEMISS_RANK = 'littlemissRank',
-  COMBINED_RANK = 'combinedRank',
   POPULARITY = 'popularity',
   RELEASE_DATE = 'releaseDate',
 }
 
+// Reasonable limit for pagination display
+const MAX_REASONABLE_PAGES = 10;
+
 export const useAnime = (initialPage = 1, perPage = 20) => {
+  // Core state
   const [anime, setAnime] = useState<Anime[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [page, setPage] = useState<number>(initialPage);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
-  const [totalPages, setTotalPages] = useState<number>(0);
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>(SortOption.RANK);
-  const [topPicks, setTopPicks] = useState<{
-    hadoku: Anime | null;
-    littlemiss: Anime | null;
-  }>({ hadoku: null, littlemiss: null });
+  const [sortOption, setSortOption] = useState<SortOption>(SortOption.POPULARITY);
+  const [filteredList, setFilteredList] = useState<boolean>(false);
   
-  // Use refs for values that shouldn't trigger re-renders
-  const retryCountRef = useRef(0);
-  const MAX_RETRIES = 3;
+  // Pagination state
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState<boolean>(false);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  
+  // Refs for internal state that shouldn't trigger re-renders
   const isMountedRef = useRef(true);
   const originalAnimeRef = useRef<Anime[]>([]);
-
+  const lastPageInfoRef = useRef<{lastPage: number, total: number} | null>(null);
+  const estimatedTotalAnimeRef = useRef<number>(0);
+  
+  // Function to calculate a reasonable number of total pages
+  const calculateTotalPages = useCallback((currentPage: number, hasNextPage: boolean): number => {
+    // We know we have at least the current page
+    let calculatedPages = currentPage;
+    
+    // If there's a next page, add one more
+    if (hasNextPage) {
+      calculatedPages += 1;
+    }
+    
+    console.log('🧮 Calculated total pages:', calculatedPages);
+    return calculatedPages;
+  }, []);
+  
   // Function to fetch anime data
   const fetchAnimeData = useCallback(async () => {
     if (!isMountedRef.current) return;
     
     try {
-      logger.info(`Fetching anime data for page ${page}`, 'useAnime');
+      console.log('🔄 Fetching anime data for page:', page, 'with perPage:', perPage);
       setLoading(true);
+      setFilteredList(false);
+      setError(null);
       
       const response = await fetchUpcomingAnime(page, perPage);
       
       if (!isMountedRef.current) return;
       
       // Validate response structure
-      if (!response || !response.data || !response.data.Page || !Array.isArray(response.data.Page.media)) {
+      if (!response?.data?.Page?.media) {
         throw new Error('Invalid API response structure');
       }
       
-      logger.info(`Successfully fetched anime data for page ${page}`, 'useAnime');
-      logger.debug(`Received ${response.data.Page.media.length} anime items`, 'useAnime');
-      
       // Store the original anime list
       originalAnimeRef.current = response.data.Page.media;
-      
-      // Apply ranking to the anime list
-      const rankedAnime = await rankAnimeList(response.data.Page.media);
-      
-      // Extract top picks
-      const hadokuTopPick = rankedAnime.find(anime => anime.isHadokuTopPick) || null;
-      const littlemissTopPick = rankedAnime.find(anime => anime.isLittlemissTopPick) || null;
-      
-      setTopPicks({
-        hadoku: hadokuTopPick,
-        littlemiss: littlemissTopPick
-      });
+      console.log('📊 Received anime count:', response.data.Page.media.length);
       
       // Apply sorting based on the current sort option
-      const sortedAnime = sortAnimeList(rankedAnime, sortOption);
-      
+      const sortedAnime = sortAnimeList(sortOption);
       setAnime(sortedAnime);
-      setHasNextPage(response.data.Page.pageInfo.hasNextPage);
-      setTotalPages(response.data.Page.pageInfo.lastPage);
-      setError(null);
-      retryCountRef.current = 0; // Reset retry count on success
+      
+      // Extract pagination info from API response
+      const pageInfo = response.data.Page.pageInfo;
+      console.log('📄 API pagination info:', {
+        hasNextPage: pageInfo.hasNextPage,
+        currentPage: page,
+        lastPage: pageInfo.lastPage,
+        total: pageInfo.total
+      });
+      
+      // Set pagination state
+      const apiHasNextPage = pageInfo.hasNextPage || false;
+      setHasNextPage(apiHasNextPage);
+      setHasPreviousPage(page > 1);
+      
+      // Calculate total pages
+      if (sortedAnime.length > 0) {
+        const calculatedPages = calculateTotalPages(page, apiHasNextPage);
+        setTotalPages(calculatedPages);
+      } else {
+        console.log('❌ No anime data, setting totalPages to 0');
+        setTotalPages(0);
+      }
       
       // Extract season information from the first anime if available
       if (response.data.Page.media.length > 0) {
@@ -92,107 +110,37 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
             season: firstAnime.season,
             year: firstAnime.seasonYear
           });
-          logger.debug(`Set season info: ${firstAnime.season} ${firstAnime.seasonYear}`, 'useAnime');
         }
       }
+      
+      // Mark the list as filtered after a short delay to ensure all state updates have been processed
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('✅ Anime list filtered and ready');
+          setFilteredList(true);
+        }
+      }, 100);
     } catch (err) {
-      if (!isMountedRef.current) return;
-      
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-      logger.error(`Error fetching anime data: ${errorMessage}`, 'useAnime', err);
-      
-      // Set error state
+      console.error('❌ Error fetching anime data:', err);
       setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-      
-      // Handle retry logic
-      if (retryCountRef.current < MAX_RETRIES) {
-        const nextRetryCount = retryCountRef.current + 1;
-        retryCountRef.current = nextRetryCount;
-        
-        const retryDelay = Math.pow(2, nextRetryCount) * 1000; // Exponential backoff
-        logger.warn(`Retrying fetch (${nextRetryCount}/${MAX_RETRIES}) in ${retryDelay}ms`, 'useAnime');
-        
-        // Schedule retry
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            logger.info(`Executing retry attempt ${nextRetryCount}`, 'useAnime');
-            fetchAnimeData();
-          }
-        }, retryDelay);
-      } else {
-        logger.error(`Max retries (${MAX_RETRIES}) reached, giving up`, 'useAnime');
-        // Set empty data to prevent null reference errors
-        setAnime([]);
-        setHasNextPage(false);
-        setTotalPages(0);
-      }
+      setAnime([]);
+      setHasNextPage(false);
+      setHasPreviousPage(false);
+      setTotalPages(0);
+      setFilteredList(false);
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
       }
     }
-  }, [page, perPage]);
+  }, [page, perPage, sortOption, calculateTotalPages]);
 
   // Function to sort anime list based on sort option
-  const sortAnimeList = useCallback((animeList: Anime[], option: SortOption): Anime[] => {
-    logger.debug(`Sorting anime list by ${option}`, 'useAnime');
-    
+  const sortAnimeList = useCallback((option: SortOption): Anime[] => {
     // Create a copy to avoid mutating the original
-    const sortedList = [...animeList];
+    const sortedList = [...originalAnimeRef.current];
     
     switch (option) {
-      case SortOption.RANK:
-        // For the default ranking, implement the specific order:
-        // 1. Combined top pick
-        // 2 & 3. Hadoku's and Littlemiss's top picks (random order)
-        // 4+. Remaining combined top picks
-        return sortedList.sort((a, b) => {
-          // First, identify the combined top pick (rank 1)
-          const aIsCombinedTop1 = a.combinedRank === 1;
-          const bIsCombinedTop1 = b.combinedRank === 1;
-          
-          // Combined top 1 comes first
-          if (aIsCombinedTop1 && !bIsCombinedTop1) return -1;
-          if (!aIsCombinedTop1 && bIsCombinedTop1) return 1;
-          
-          // Next, identify Hadoku's and Littlemiss's top picks
-          const aIsUserTopPick = a.isHadokuTopPick || a.isLittlemissTopPick;
-          const bIsUserTopPick = b.isHadokuTopPick || b.isLittlemissTopPick;
-          
-          // User top picks come next
-          if (aIsUserTopPick && !bIsUserTopPick) return -1;
-          if (!aIsUserTopPick && bIsUserTopPick) return 1;
-          
-          // If both are user top picks, randomize their order
-          // Use a deterministic but seemingly random approach based on IDs
-          if (aIsUserTopPick && bIsUserTopPick) {
-            // If one is Hadoku's and the other is Littlemiss's, randomize
-            const aIsHadoku = a.isHadokuTopPick && !a.isLittlemissTopPick;
-            const bIsHadoku = b.isHadokuTopPick && !b.isLittlemissTopPick;
-            
-            if (aIsHadoku !== bIsHadoku) {
-              // Use a pseudo-random approach based on anime IDs
-              // This ensures consistent sorting within a session but appears random
-              return (parseInt(String(a.id)) % 2 === 0) ? -1 : 1;
-            }
-          }
-          
-          // Then sort by combined rank for the rest
-          return (a.combinedRank || 999) - (b.combinedRank || 999);
-        });
-        
-      case SortOption.HADOKU_RANK:
-        // Sort by Hadoku rank (descending)
-        return sortedList.sort((a, b) => (b.hadokuScore || 0) - (a.hadokuScore || 0));
-        
-      case SortOption.LITTLEMISS_RANK:
-        // Sort by Little Miss rank (descending)
-        return sortedList.sort((a, b) => (b.littlemissScore || 0) - (a.littlemissScore || 0));
-        
-      case SortOption.COMBINED_RANK:
-        // Sort by combined rank (descending)
-        return sortedList.sort((a, b) => (b.combinedScore || 0) - (a.combinedScore || 0));
-        
       case SortOption.POPULARITY:
         // Sort by popularity (descending)
         return sortedList.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
@@ -221,7 +169,6 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
         });
         
       default:
-        // Use the default sorting from the API
         return sortedList;
     }
   }, []);
@@ -229,26 +176,19 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
   // Effect to handle sort option changes
   useEffect(() => {
     if (originalAnimeRef.current.length > 0) {
-      logger.debug(`Sort option changed to ${sortOption}`, 'useAnime');
-      
+      console.log('🔄 Re-sorting anime list with option:', sortOption);
       // Re-sort the anime list when the sort option changes
-      // Use the original anime list from the ref to avoid an infinite loop
-      const sortedAnime = sortAnimeList(originalAnimeRef.current, sortOption);
-      
+      const sortedAnime = sortAnimeList(sortOption);
       setAnime(sortedAnime);
+      
+      // Mark the list as filtered after sorting
+      setFilteredList(true);
     }
   }, [sortOption, sortAnimeList]);
 
   // Effect to fetch data when page or perPage changes
   useEffect(() => {
-    logger.debug(`useEffect triggered with page: ${page}, perPage: ${perPage}`, 'useAnime');
-    retryCountRef.current = 0; // Reset retry count when page or perPage changes
     fetchAnimeData();
-    
-    // Cleanup function
-    return () => {
-      logger.debug('Cleaning up useAnime effect', 'useAnime');
-    };
   }, [page, perPage, fetchAnimeData]);
   
   // Effect to handle component unmount
@@ -258,61 +198,72 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     };
   }, []);
 
-  const nextPage = useCallback(() => {
+  // Simple navigation functions
+  const goToNextPage = useCallback(() => {
     if (hasNextPage) {
-      logger.debug(`Moving to next page: ${page + 1}`, 'useAnime');
-      setPage(prevPage => prevPage + 1);
-    } else {
-      logger.debug('Cannot go to next page: already at last page', 'useAnime');
+      console.log('⏭️ Going to next page:', page + 1);
+      setPage(prev => prev + 1);
     }
   }, [hasNextPage, page]);
 
-  const previousPage = useCallback(() => {
-    if (page > 1) {
-      logger.debug(`Moving to previous page: ${page - 1}`, 'useAnime');
-      setPage(prevPage => prevPage - 1);
-    } else {
-      logger.debug('Cannot go to previous page: already at first page', 'useAnime');
+  const goToPreviousPage = useCallback(() => {
+    if (hasPreviousPage) {
+      console.log('⏮️ Going to previous page:', page - 1);
+      setPage(prev => prev - 1);
     }
-  }, [page]);
+  }, [hasPreviousPage, page]);
 
-  const goToPage = useCallback((pageNumber: number) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages) {
-      logger.debug(`Going to page: ${pageNumber}`, 'useAnime');
-      setPage(pageNumber);
-    } else {
-      logger.warn(`Invalid page number: ${pageNumber}. Valid range: 1-${totalPages}`, 'useAnime');
+  const goToPage = useCallback((pageNum: number) => {
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      console.log('🔢 Going to specific page:', pageNum);
+      setPage(pageNum);
     }
   }, [totalPages]);
 
-  // Function to retry fetching data manually
+  // Retry function
   const retry = useCallback(() => {
-    logger.info('Manual retry requested', 'useAnime');
-    retryCountRef.current = 0;
-    setError(null);
+    console.log('🔄 Retrying data fetch');
     fetchAnimeData();
   }, [fetchAnimeData]);
 
-  // Function to change the sort option
-  const setSorting = useCallback((option: SortOption) => {
-    logger.info(`Setting sort option to ${option}`, 'useAnime');
-    setSortOption(option);
-  }, []);
+  // Simple computed value to determine if pagination should be shown
+  const showPagination = !loading && filteredList && anime.length > 0 && totalPages > 1;
+  
+  // Log current state for debugging
+  useEffect(() => {
+    console.log('📊 Current state:', {
+      loading,
+      filteredList,
+      animeCount: anime.length,
+      page,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+      showPagination
+    });
+  }, [loading, filteredList, anime.length, page, totalPages, hasNextPage, hasPreviousPage, showPagination]);
 
   return {
+    // Data
     anime,
     loading,
     error,
     page,
-    hasNextPage,
     totalPages,
-    nextPage,
-    previousPage,
-    goToPage,
-    retry,
     seasonInfo,
     sortOption,
-    setSorting,
-    topPicks,
+    filteredList,
+    
+    // Actions
+    setSortOption,
+    goToNextPage,
+    goToPreviousPage,
+    goToPage,
+    retry,
+    
+    // Computed
+    hasNextPage,
+    hasPreviousPage,
+    showPagination
   };
 };

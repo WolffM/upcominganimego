@@ -52,40 +52,7 @@ export interface Anime {
     timeUntilAiring: number;
     episode: number;
   } | null;
-  // Custom fields for our application
-  rank?: number; // Calculated rank based on our algorithm
-  rankingScore?: number; // Numerical score used for ranking
-  
-  // User-specific ranking fields
-  hadokuRank?: number; // Rank based on Hadoku's preferences
-  hadokuScore?: number; // Score based on Hadoku's preferences
-  littlemissRank?: number; // Rank based on LittleMiss's preferences
-  littlemissScore?: number; // Score based on LittleMiss's preferences
-  combinedRank?: number; // Combined rank from both users
-  combinedScore?: number; // Combined score from both users
-  
-  // Individual user ranking factors
-  hadokuFactors?: {
-    studioScore: number;
-    directorScore: number;
-    genreScore: number;
-    tagScore: number;
-    popularityBonus: number;
-  };
-  
-  littlemissFactors?: {
-    studioScore: number;
-    directorScore: number;
-    genreScore: number;
-    tagScore: number;
-    popularityBonus: number;
-  };
-  
-  // Top pick indicators
-  isHadokuTopPick?: boolean;
-  isLittlemissTopPick?: boolean;
-  
-  // Studio, director, and other metadata for ranking
+  // Studio and staff data from the API
   studios?: {
     nodes: {
       id: number;
@@ -102,18 +69,6 @@ export interface Anime {
         };
       };
     }[];
-  };
-  
-  rankingFactors?: {
-    trailerQuality?: number;
-    popularity: number;
-    anticipation?: number;
-    genreRelevance: number;
-    staffRating?: number;
-    studioScore?: number;
-    directorScore?: number;
-    genreScore?: number;
-    tagScore?: number;
   };
 }
 

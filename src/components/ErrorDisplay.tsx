@@ -1,9 +1,10 @@
 import React from 'react';
+import { ERROR_STYLES } from '@/utils/uiStyles';
 
 interface ErrorDisplayProps {
   message: string;
-  error: Error | null;
-  onRetry: () => void;
+  error?: Error | null;
+  onRetry?: () => void;
 }
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
@@ -12,18 +13,27 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   onRetry
 }) => {
   return (
-    <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-5 rounded-lg">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div className="mb-4 md:mb-0">
-          <h3 className="font-bold text-lg mb-2">{message}</h3>
-          <p className="text-sm">{error?.message || 'An unknown error occurred'}</p>
+    <div className={ERROR_STYLES.CONTAINER}>
+      <div className={ERROR_STYLES.CONTENT}>
+        <div className={ERROR_STYLES.MESSAGE_CONTAINER}>
+          <h3 className={ERROR_STYLES.TITLE}>
+            {message}
+          </h3>
+          {error && (
+            <p className={ERROR_STYLES.ERROR_TEXT}>
+              {error.message || 'An unknown error occurred'}
+            </p>
+          )}
         </div>
-        <button 
-          onClick={onRetry}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-        >
-          Try Again
-        </button>
+        
+        {onRetry && (
+          <button 
+            onClick={onRetry}
+            className={ERROR_STYLES.RETRY_BUTTON}
+          >
+            Try Again
+          </button>
+        )}
       </div>
     </div>
   );

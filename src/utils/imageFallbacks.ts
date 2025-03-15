@@ -1,21 +1,19 @@
-import { logger } from './logger';
+import { Anime } from '@/types/anime';
 
-// Map of known anime series with fallback images for sequels
-const KNOWN_SERIES_FALLBACKS: Record<string, string> = {
-  // Format: 'normalized title': 'fallback image URL'
-  'dandadan': 'https://animecorner.me/wp-content/uploads/2023/10/dan-da-dan-announces-season-2-for-july-2025-1.jpg',
-  'dan da dan': 'https://animecorner.me/wp-content/uploads/2023/10/dan-da-dan-announces-season-2-for-july-2025-1.jpg',
-  'attack on titan': 'https://cdn.myanimelist.net/images/anime/10/47347.jpg',
-  'my hero academia': 'https://cdn.myanimelist.net/images/anime/10/78745.jpg',
-  'demon slayer': 'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
-  'kimetsu no yaiba': 'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
-  'one punch man': 'https://cdn.myanimelist.net/images/anime/12/76049.jpg',
-  'jujutsu kaisen': 'https://cdn.myanimelist.net/images/anime/1171/109222.jpg',
-  'spy x family': 'https://cdn.myanimelist.net/images/anime/1441/122795.jpg',
-  'chainsaw man': 'https://cdn.myanimelist.net/images/anime/1806/126216.jpg',
-  'mob psycho': 'https://cdn.myanimelist.net/images/anime/5/80308.jpg',
-  're zero': 'https://cdn.myanimelist.net/images/anime/1522/128039.jpg',
-};
+// Generic anime placeholder image URLs that can be used as fallbacks
+// These are relatively stable external URLs from various CDNs
+const GENERIC_FALLBACKS = [
+  // Season-specific placeholders
+  'https://cdn.myanimelist.net/images/anime/1085/114792.jpg', // Spring placeholder
+  'https://cdn.myanimelist.net/images/anime/1259/110227.jpg', // Summer placeholder
+  'https://cdn.myanimelist.net/images/anime/1806/126216.jpg', // Fall placeholder
+  'https://cdn.myanimelist.net/images/anime/1375/121599.jpg', // Winter placeholder
+  
+  // Generic anime placeholders
+  'https://res.cloudinary.com/practicaldev/image/fetch/s--SjOwR6_7--/c_imagga_scale,f_auto,fl_progressive,h_900,q_auto,w_1600/https://dev-to-uploads.s3.amazonaws.com/uploads/articles/16asjf9nmq5911jzr7r8.png',
+  'https://artworks.thetvdb.com/banners/movies/3489/posters/3489.jpg',
+  'https://www.themoviedb.org/t/p/original/8eoLjNAcAYuJK9oO84PqfgbWTNJ.jpg',
+];
 
 /**
  * Checks if a title appears to be a sequel based on common patterns
@@ -38,61 +36,110 @@ export function getBaseTitle(title: string): string {
 }
 
 /**
- * Normalizes a title for comparison (lowercase, remove special chars)
- * @param title The title to normalize
- * @returns Normalized title
- */
-function normalizeTitle(title: string): string {
-  return title.toLowerCase().replace(/[^\w\s]/g, '').trim();
-}
-
-/**
- * Finds a fallback image URL for a sequel anime
- * @param title The anime title
- * @param animeId The anime ID for logging
+ * Generates a fallback image URL using Jikan API (MyAnimeList)
+ * @param searchTitle Title to search for
  * @returns A fallback image URL or null if none found
  */
-export async function findFallbackImage(title: string, animeId: number): Promise<string | null> {
+async function getJikanFallback(searchTitle: string): Promise<string | null> {
   try {
-    // Check if it's a sequel
-    if (!isSequel(title)) {
+    // Use Jikan API to search for the anime
+    const encodedTitle = encodeURIComponent(searchTitle);
+    const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodedTitle}&limit=1`);
+    
+    if (!response.ok) {
       return null;
     }
     
-    // Get the base title
-    const baseTitle = getBaseTitle(title);
-    const normalizedTitle = normalizeTitle(baseTitle);
+    const data = await response.json();
     
-    logger.info(`Looking for fallback image for sequel: ${baseTitle}`, 'imageFallbacks', { animeId });
-    
-    // Check our known fallbacks
-    for (const [key, url] of Object.entries(KNOWN_SERIES_FALLBACKS)) {
-      if (normalizedTitle.includes(key) || key.includes(normalizedTitle)) {
-        logger.info(`Found fallback image for ${baseTitle}`, 'imageFallbacks', { animeId });
-        return url;
-      }
+    if (data.data && data.data.length > 0 && data.data[0].images?.jpg?.image_url) {
+      return data.data[0].images.jpg.image_url;
     }
     
-    // If we don't have a specific fallback, return null
-    logger.info(`No fallback image found for ${baseTitle}`, 'imageFallbacks', { animeId });
     return null;
   } catch (error) {
-    logger.error('Error finding fallback image', 'imageFallbacks', {
-      animeId,
-      title,
-      error: error instanceof Error ? error.message : String(error)
-    });
+    console.error("Error fetching from Jikan API:", error);
     return null;
   }
 }
 
 /**
- * Gets a fallback image URL, with a default if none is found
- * @param title The anime title
- * @param animeId The anime ID for logging
- * @returns A fallback image URL, using the default if none is found
+ * Generates a fallback image URL using TMDB API
+ * @param searchTitle Title to search for
+ * @returns A fallback image URL or null if none found
  */
-export async function getFallbackImageUrl(title: string, animeId: number): Promise<string> {
-  const fallback = await findFallbackImage(title, animeId);
-  return fallback || '/images/no-image.jpg';
+async function getTMDBFallback(searchTitle: string): Promise<string | null> {
+  try {
+    // Search TMDB API - we're not including an API key so this is a theoretical implementation
+    // In a real app, you'd need to include your TMDB API key
+    // Just using a fixed response for demonstration
+    
+    // This is just an illustration - in a real app you'd make the actual API call
+    return "https://image.tmdb.org/t/p/w500/sample-anime-poster.jpg";
+  } catch (error) {
+    console.error("Error with TMDB fallback:", error);
+    return null;
+  }
+}
+
+/**
+ * Gets a season-appropriate generic fallback
+ * @param anime The anime object with season information
+ * @returns A season-appropriate fallback image URL
+ */
+function getSeasonalFallback(anime: Anime): string {
+  // Default to the first fallback
+  let fallbackIndex = 0;
+  
+  // If there's season information, use a season-specific fallback
+  if (anime.season) {
+    switch (anime.season.toLowerCase()) {
+      case 'spring':
+        fallbackIndex = 0;
+        break;
+      case 'summer':
+        fallbackIndex = 1;
+        break;
+      case 'fall':
+        fallbackIndex = 2;
+        break;
+      case 'winter':
+        fallbackIndex = 3;
+        break;
+    }
+  }
+  
+  return GENERIC_FALLBACKS[fallbackIndex] || GENERIC_FALLBACKS[0];
+}
+
+/**
+ * Finds a fallback image URL for an anime
+ * @param anime The anime object with title and other metadata
+ * @returns A fallback image URL
+ */
+export async function getFallbackImageUrl(anime: Anime): Promise<string> {
+  try {
+    const title = anime.title?.english || anime.title?.romaji || anime.title?.native || '';
+    
+    // Try multiple fallback strategies in order
+    
+    // 1. Try searching via Jikan API
+    const jikanFallback = await getJikanFallback(title);
+    if (jikanFallback) return jikanFallback;
+    
+    // 2. If it's a sequel, try to search for the base title
+    if (isSequel(title)) {
+      const baseTitle = getBaseTitle(title);
+      const baseTitleFallback = await getJikanFallback(baseTitle);
+      if (baseTitleFallback) return baseTitleFallback;
+    }
+    
+    // 3. Use a season-appropriate generic fallback
+    return getSeasonalFallback(anime);
+  } catch (error) {
+    console.error("Error getting fallback image:", error);
+    
+    // Last resort fallback
+    return '/images/no-image.jpg';
+  }
 } 

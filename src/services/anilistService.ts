@@ -1,11 +1,17 @@
 import { request, gql } from 'graphql-request';
 import { AnimeResponse } from '@/types/anime';
-import { logger } from '@/utils/logger';
 
 const ANILIST_API_URL = 'https://graphql.anilist.co';
 
+// Enum for anime seasons
+export enum AnimeSeason {
+  WINTER = 'WINTER',
+  SPRING = 'SPRING',
+  SUMMER = 'SUMMER',
+  FALL = 'FALL'
+}
+
 // GraphQL query to fetch upcoming anime with trailers
-// Updated based on AniList API documentation
 const UPCOMING_ANIME_QUERY = gql`
   query UpcomingAnime($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $sort: [MediaSort]) {
     Page(page: $page, perPage: $perPage) {
@@ -31,6 +37,7 @@ const UPCOMING_ANIME_QUERY = gql`
         }
         description
         coverImage {
+          extraLarge
           large
           medium
           color
@@ -98,7 +105,62 @@ const UPCOMING_ANIME_QUERY = gql`
   }
 `;
 
-// Updated interface to match the actual API response structure
+/**
+ * Get current anime season based on date
+ * @returns Object containing current season and year
+ */
+export function getCurrentSeason(): { season: AnimeSeason; year: number } {
+  const now = new Date();
+  const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+  const year = now.getFullYear();
+
+  // Determine season based on month
+  let season: AnimeSeason;
+  if (month >= 3 && month <= 5) {
+    season = AnimeSeason.SPRING;
+  } else if (month >= 6 && month <= 8) {
+    season = AnimeSeason.SUMMER;
+  } else if (month >= 9 && month <= 11) {
+    season = AnimeSeason.FALL;
+  } else {
+    season = AnimeSeason.WINTER;
+  }
+
+  return { season, year };
+}
+
+/**
+ * Get next anime season after the current one
+ * @returns Object containing next season and year
+ */
+export function getNextSeason(): { season: AnimeSeason; year: number } {
+  const { season, year } = getCurrentSeason();
+  
+  let nextSeason: AnimeSeason;
+  let nextYear = year;
+  
+  switch (season) {
+    case AnimeSeason.WINTER:
+      nextSeason = AnimeSeason.SPRING;
+      break;
+    case AnimeSeason.SPRING:
+      nextSeason = AnimeSeason.SUMMER;
+      break;
+    case AnimeSeason.SUMMER:
+      nextSeason = AnimeSeason.FALL;
+      break;
+    case AnimeSeason.FALL:
+      nextSeason = AnimeSeason.WINTER;
+      nextYear = year + 1;
+      break;
+    default:
+      nextSeason = AnimeSeason.SPRING;
+  }
+  
+  return { season: nextSeason, year: nextYear };
+}
+
+// Interface for the raw API response
 interface AnilistApiResponse {
   Page: {
     pageInfo: {
@@ -112,57 +174,33 @@ interface AnilistApiResponse {
   };
 }
 
-export const fetchUpcomingAnime = async (page = 1, perPage = 20): Promise<AnimeResponse> => {
+/**
+ * Fetch upcoming anime from AniList API
+ * @param page Page number to fetch
+ * @param perPage Number of items per page
+ * @param targetSeason Optional specific season to fetch
+ * @param targetYear Optional specific year to fetch
+ * @returns Promise with anime response data
+ */
+export const fetchUpcomingAnime = async (
+  page = 1, 
+  perPage = 20,
+  targetSeason?: AnimeSeason,
+  targetYear?: number
+): Promise<AnimeResponse> => {
   try {
-    logger.info(`Fetching upcoming anime for page ${page} with ${perPage} items per page`, 'AnilistService');
-    
-    // Get current date information
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    
-    // Determine current season
-    const month = today.getMonth() + 1; // JavaScript months are 0-indexed
-    let currentSeason;
-    if (month >= 3 && month <= 5) currentSeason = 'SPRING';
-    else if (month >= 6 && month <= 8) currentSeason = 'SUMMER';
-    else if (month >= 9 && month <= 11) currentSeason = 'FALL';
-    else currentSeason = 'WINTER';
-    
-    // Calculate next season and year
-    let nextSeason;
-    let nextSeasonYear = currentYear;
-    
-    switch (currentSeason) {
-      case 'WINTER':
-        nextSeason = 'SPRING';
-        break;
-      case 'SPRING':
-        nextSeason = 'SUMMER';
-        break;
-      case 'SUMMER':
-        nextSeason = 'FALL';
-        break;
-      case 'FALL':
-        nextSeason = 'WINTER';
-        nextSeasonYear = currentYear + 1;
-        break;
-    }
-    
-    logger.debug(`Current season: ${currentSeason} ${currentYear}, Next season: ${nextSeason} ${nextSeasonYear}`, 'AnilistService');
+    // Use provided season/year or get the next season
+    const { season, year } = targetSeason && targetYear 
+      ? { season: targetSeason, year: targetYear }
+      : getNextSeason();
     
     const variables = {
       page,
       perPage,
-      season: nextSeason,
-      seasonYear: nextSeasonYear,
+      season,
+      seasonYear: year,
       sort: ['POPULARITY_DESC', 'START_DATE']
     };
-    
-    // Log the full request for debugging
-    logger.debug(`Sending GraphQL request to ${ANILIST_API_URL}`, 'AnilistService', {
-      query: UPCOMING_ANIME_QUERY.toString(),
-      variables
-    });
     
     // Get the direct response from the API
     const directResponse = await request<AnilistApiResponse>(ANILIST_API_URL, UPCOMING_ANIME_QUERY, variables);
@@ -171,9 +209,6 @@ export const fetchUpcomingAnime = async (page = 1, perPage = 20): Promise<AnimeR
     if (!directResponse || typeof directResponse !== 'object') {
       throw new Error(`Invalid response format: ${JSON.stringify(directResponse)}`);
     }
-    
-    // Log the raw response for debugging
-    logger.debug('Raw API response received', 'AnilistService', directResponse);
     
     // Check if the response has the expected structure
     if (!directResponse.Page) {
@@ -191,28 +226,9 @@ export const fetchUpcomingAnime = async (page = 1, perPage = 20): Promise<AnimeR
       }
     };
     
-    logger.info(`Successfully fetched ${response.data.Page.media.length} anime for page ${page}`, 'AnilistService');
-    logger.debug(`Page info: ${JSON.stringify(response.data.Page.pageInfo)}`, 'AnilistService');
-    
-    // Log how many anime have trailers
-    const animeWithTrailers = response.data.Page.media.filter(anime => 
-      anime.trailer && anime.trailer.id && anime.trailer.site
-    ).length;
-    
-    logger.info(`Found ${animeWithTrailers} anime with trailers out of ${response.data.Page.media.length}`, 'AnilistService');
-    
     return response;
   } catch (error) {
-    // Enhanced error logging
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    logger.error(`Error fetching upcoming anime: ${errorMessage}`, 'AnilistService', {
-      error,
-      stack: errorStack,
-      page,
-      perPage
-    });
+    console.error("Error fetching anime data:", error);
     
     // Create a fallback response with empty data to prevent null reference errors
     const fallbackResponse: AnimeResponse = {
@@ -230,35 +246,38 @@ export const fetchUpcomingAnime = async (page = 1, perPage = 20): Promise<AnimeR
       }
     };
     
-    // In development, throw the error for debugging
-    if (process.env.NODE_ENV === 'development') {
-      throw error;
-    }
-    
-    // In production, return the fallback response
-    logger.info('Returning fallback empty response', 'AnilistService');
     return fallbackResponse;
   }
 };
 
-// Function to get YouTube embed URL from trailer data
-export const getTrailerEmbedUrl = (trailer: { id: string | null; site: string | null }, autoplay: boolean = false): string => {
+/**
+ * Get a proper embed URL for a video trailer
+ * @param trailer Trailer object with ID and site
+ * @param autoplay Whether to autoplay the video
+ * @returns Properly formatted embed URL
+ */
+export const getTrailerEmbedUrl = (
+  trailer: { id: string | null; site: string | null }, 
+  autoplay: boolean = false
+): string => {
   if (!trailer || !trailer.id || !trailer.site) {
-    logger.warn('Missing trailer data', 'AnilistService');
     return '';
   }
   
   const { id, site } = trailer;
-  logger.debug(`Getting trailer embed URL for ID: ${id}, site: ${site}, autoplay: ${autoplay}`, 'AnilistService');
-  
   const autoplayParam = autoplay ? '?autoplay=1&mute=0' : '';
   
-  if (site.toLowerCase() === 'youtube') {
+  const siteLower = site.toLowerCase();
+  
+  if (siteLower === 'youtube') {
     return `https://www.youtube.com/embed/${id}${autoplayParam}`;
-  } else if (site.toLowerCase() === 'dailymotion') {
+  } else if (siteLower === 'dailymotion') {
     return `https://www.dailymotion.com/embed/video/${id}${autoplayParam}`;
+  } else if (siteLower === 'vimeo') {
+    return `https://player.vimeo.com/video/${id}${autoplayParam ? autoplayParam : '?'}`;
+  } else if (siteLower === 'bilibili') {
+    return `https://player.bilibili.com/player.html?aid=${id}${autoplay ? '&autoplay=1' : ''}`;
   }
   
-  logger.warn(`Unsupported trailer site: ${site}`, 'AnilistService');
   return '';
 }; 

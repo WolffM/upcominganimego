@@ -1,4 +1,3 @@
-import { logger } from './logger';
 
 interface DateParts {
   year?: number;
@@ -34,13 +33,10 @@ export function formatDate(dateParts: DateParts): string {
     
     return new Intl.DateTimeFormat('en-US', options).format(date);
   } catch (error) {
-    logger.error('Error formatting date', 'dateFormatter', {
-      dateParts,
-      error: error instanceof Error ? error.message : String(error)
-    });
+
+    }
     return 'TBA';
   }
-}
 
 /**
  * Calculates how many days until a given date
@@ -68,13 +64,10 @@ export function getDaysUntil(dateParts: DateParts): number | null {
     
     return diffDays;
   } catch (error) {
-    logger.error('Error calculating days until date', 'dateFormatter', {
-      dateParts,
-      error: error instanceof Error ? error.message : String(error)
-    });
+
+    }
     return null;
   }
-}
 
 /**
  * Returns a human-readable string for days until release

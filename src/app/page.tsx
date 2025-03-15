@@ -2,60 +2,93 @@
 
 import { useState, useEffect } from 'react';
 import { useAnime, SortOption } from '@/hooks/useAnime';
-import { AnimeCard } from '@/components/AnimeCard';
+import { AnimeGrid } from '@/components/AnimeGrid';
 import { Pagination } from '@/components/Pagination';
 import { SortSelector } from '@/components/SortSelector';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { FeaturedPicks } from '@/components/FeaturedPicks';
-import { logger } from '@/utils/logger';
+import { formatSeasonTitle } from '@/utils/uiHelpers';
+import { COMMON_STYLES, PAGE_STYLES } from '@/utils/uiStyles';
 
 export default function Home() {
   const [itemsPerPage] = useState(24);
   const [mounted, setMounted] = useState(false);
+  
+  // Log when component renders
+  console.log('🏠 Home component rendering');
   
   const { 
     anime, 
     loading, 
     error, 
     page, 
-    hasNextPage, 
     totalPages, 
-    nextPage, 
-    previousPage, 
-    goToPage, 
+    hasNextPage,
+    hasPreviousPage,
+    goToNextPage,
+    goToPreviousPage,
+    goToPage,
     retry,
     seasonInfo,
     sortOption,
-    setSorting,
-    topPicks
+    setSortOption,
+    showPagination,
+    filteredList
   } = useAnime(1, itemsPerPage);
 
   // Use useEffect to handle client-side only code
   useEffect(() => {
+    console.log('🔄 Home component mounted');
     setMounted(true);
-    logger.info('Home page mounted', 'Home');
   }, []);
+
+  // Log when pagination state changes
+  useEffect(() => {
+    console.log('📄 Pagination state in Home:', { 
+      page, 
+      totalPages, 
+      hasNextPage, 
+      hasPreviousPage, 
+      showPagination,
+      filteredList
+    });
+  }, [page, totalPages, hasNextPage, hasPreviousPage, showPagination, filteredList]);
+  
+  // Log when pagination is about to render
+  useEffect(() => {
+    if (showPagination) {
+      console.log('📄 Rendering pagination with', totalPages, 'total pages');
+    }
+  }, [showPagination, totalPages]);
+
+  // Log when filtered list state changes
+  useEffect(() => {
+    console.log('🔍 Filtered list state:', filteredList);
+  }, [filteredList]);
 
   // Handle sort change
   const handleSortChange = (option: SortOption) => {
-    logger.info(`Changing sort option to ${option}`, 'Home');
-    setSorting(option);
+    console.log('🔄 Sort option changed to:', option);
+    setSortOption(option);
   };
 
   // Handle retry
   const handleRetry = () => {
-    logger.info('Retrying anime fetch', 'Home');
+    console.log('🔄 Retry requested');
     retry();
   };
 
   // If not mounted yet, show nothing to avoid hydration issues
-  if (!mounted) return null;
+  if (!mounted) {
+    console.log('⏳ Component not mounted yet, returning null');
+    return null;
+  }
 
-  // Handle loading state
+  // Handle loading state - only show spinner on initial load
   if (loading && !anime.length) {
+    console.log('⏳ Showing loading spinner (initial load)');
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className={COMMON_STYLES.CONTAINER}>
         <LoadingSpinner message="Loading upcoming anime..." />
       </div>
     );
@@ -63,8 +96,9 @@ export default function Home() {
 
   // Handle error state
   if (error && !anime.length) {
+    console.log('❌ Showing error display');
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className={COMMON_STYLES.CONTAINER}>
         <ErrorDisplay 
           message="Failed to load upcoming anime" 
           error={error} 
@@ -75,36 +109,30 @@ export default function Home() {
   }
 
   // Season title formatting
-  const seasonTitle = seasonInfo 
-    ? `${seasonInfo.season.charAt(0).toUpperCase() + seasonInfo.season.slice(1)} ${seasonInfo.year}` 
-    : 'Upcoming Anime';
+  const seasonTitle = formatSeasonTitle(
+    seasonInfo?.season,
+    seasonInfo?.year
+  );
+
+  console.log('🎬 Rendering main content with', anime.length, 'anime', filteredList ? '(filtered)' : '(not filtered yet)');
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow-md">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-            {seasonTitle} Anime
+    <div className={PAGE_STYLES.CONTAINER}>
+      <header className={PAGE_STYLES.HEADER}>
+        <div className={PAGE_STYLES.HEADER_CONTAINER}>
+          <h1 className={PAGE_STYLES.TITLE}>
+            {seasonTitle}
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
+          <p className={PAGE_STYLES.SUBTITLE}>
             Discover upcoming anime releases with trailers
           </p>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Featured Top Picks */}
-        {(topPicks.hadoku || topPicks.littlemiss) && (
-          <FeaturedPicks 
-            hadokuPick={topPicks.hadoku} 
-            littlemissPick={topPicks.littlemiss} 
-            className="mb-8"
-          />
-        )}
-        
+      <main className={COMMON_STYLES.CONTAINER}>
         {/* Sorting Controls */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">
+        <div className={PAGE_STYLES.CONTROLS_ROW}>
+          <h2 className={PAGE_STYLES.SECTION_TITLE}>
             {anime.length > 0 ? `Showing ${anime.length} anime` : 'No anime found'}
           </h2>
           <SortSelector 
@@ -114,25 +142,34 @@ export default function Home() {
         </div>
         
         {/* Anime Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-          {anime.map((animeItem, index) => (
-            <AnimeCard 
-              key={animeItem.id} 
-              anime={animeItem} 
-              index={index}
-            />
-          ))}
+        <div className={PAGE_STYLES.GRID_CONTAINER}>
+          <AnimeGrid anime={anime} loading={loading} />
         </div>
         
+        {/* Loading indicator for page changes */}
+        {loading && anime.length > 0 && (
+          <div className={PAGE_STYLES.LOADING_INDICATOR}>
+            <LoadingSpinner message="Loading more anime..." />
+          </div>
+        )}
+        
+        {/* Filtering indicator */}
+        {!loading && anime.length > 0 && !filteredList && (
+          <div className={PAGE_STYLES.LOADING_INDICATOR}>
+            <LoadingSpinner message="Filtering anime by season..." />
+          </div>
+        )}
+        
         {/* Pagination */}
-        {totalPages > 1 && (
+        {showPagination && (
           <Pagination 
             currentPage={page} 
             totalPages={totalPages} 
-            hasNextPage={hasNextPage} 
-            onNextPage={nextPage} 
-            onPreviousPage={previousPage} 
-            onPageSelect={goToPage} 
+            hasNextPage={hasNextPage}
+            hasPreviousPage={hasPreviousPage}
+            onNextPage={goToNextPage}
+            onPreviousPage={goToPreviousPage}
+            onPageSelect={goToPage}
           />
         )}
       </main>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logger } from '@/utils/logger';
+import { ERROR_BOUNDARY_STYLES } from '@/utils/uiStyles';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -30,17 +30,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log the error to our logging service
-    logger.error(
-      `Error caught by ErrorBoundary: ${error.message}`,
-      'ErrorBoundary',
-      {
-        error,
-        errorInfo,
-        componentStack: errorInfo.componentStack
-      }
-    );
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // You can log the error to an error reporting service
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   render(): ReactNode {
@@ -51,23 +43,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
       
       return (
-        <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">
+        <div className={ERROR_BOUNDARY_STYLES.CONTAINER}>
+          <h2 className={ERROR_BOUNDARY_STYLES.TITLE}>
             Something went wrong
           </h2>
-          <p className="text-gray-700 dark:text-gray-300 mb-4">
+          <p className={ERROR_BOUNDARY_STYLES.MESSAGE}>
             We're sorry, but there was an error loading this content.
           </p>
-          <details className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm">
-            <summary className="cursor-pointer text-blue-600 dark:text-blue-400 font-medium">
+          <details className={ERROR_BOUNDARY_STYLES.DETAILS}>
+            <summary className={ERROR_BOUNDARY_STYLES.SUMMARY}>
               Error details
             </summary>
-            <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded overflow-auto text-sm">
+            <pre className={ERROR_BOUNDARY_STYLES.PRE}>
               {this.state.error?.toString() || 'Unknown error'}
             </pre>
           </details>
           <button
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className={ERROR_BOUNDARY_STYLES.BUTTON}
             onClick={() => this.setState({ hasError: false, error: null })}
           >
             Try again
