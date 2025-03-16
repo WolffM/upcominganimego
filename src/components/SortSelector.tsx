@@ -9,7 +9,7 @@ interface SortSelectorProps {
   usernames?: string[];
 }
 
-export const SortSelector = memo(({ 
+const SortSelectorComponent = ({ 
   currentSort, 
   onSortChange,
   hasUserPreferences = false,
@@ -49,7 +49,7 @@ export const SortSelector = memo(({
                     key={username} 
                     value={`${SortOption.USER_PREFERENCE_PREFIX}${username}`}
                   >
-                    {username}'s Preference
+                    {username}&apos;s Preference
                   </option>
                 ))}
               </>
@@ -59,4 +59,6 @@ export const SortSelector = memo(({
       </select>
     </div>
   );
-}); 
+};
+
+export const SortSelector = memo(SortSelectorComponent); 

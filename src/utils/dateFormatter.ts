@@ -11,8 +11,6 @@ interface DateParts {
  * @returns Formatted date string or 'TBA' if date is incomplete
  */
 export function formatDate(dateParts: DateParts): string {
-  try {
-    // If any part is missing, return TBA
     if (!dateParts.year || !dateParts.month) {
       return 'TBA';
     }
@@ -32,10 +30,6 @@ export function formatDate(dateParts: DateParts): string {
     }
     
     return new Intl.DateTimeFormat('en-US', options).format(date);
-  } catch (error) {
-
-    }
-    return 'TBA';
   }
 
 /**
@@ -44,8 +38,7 @@ export function formatDate(dateParts: DateParts): string {
  * @returns Number of days until the date or null if date is invalid
  */
 export function getDaysUntil(dateParts: DateParts): number | null {
-  try {
-    // If any part is missing, return null
+
     if (!dateParts.year || !dateParts.month || !dateParts.day) {
       return null;
     }
@@ -63,10 +56,6 @@ export function getDaysUntil(dateParts: DateParts): number | null {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays;
-  } catch (error) {
-
-    }
-    return null;
   }
 
 /**

@@ -64,25 +64,6 @@ async function getJikanFallback(searchTitle: string): Promise<string | null> {
 }
 
 /**
- * Generates a fallback image URL using TMDB API
- * @param searchTitle Title to search for
- * @returns A fallback image URL or null if none found
- */
-async function getTMDBFallback(searchTitle: string): Promise<string | null> {
-  try {
-    // Search TMDB API - we're not including an API key so this is a theoretical implementation
-    // In a real app, you'd need to include your TMDB API key
-    // Just using a fixed response for demonstration
-    
-    // This is just an illustration - in a real app you'd make the actual API call
-    return "https://image.tmdb.org/t/p/w500/sample-anime-poster.jpg";
-  } catch (error) {
-    console.error("Error with TMDB fallback:", error);
-    return null;
-  }
-}
-
-/**
  * Gets a season-appropriate generic fallback
  * @param anime The anime object with season information
  * @returns A season-appropriate fallback image URL

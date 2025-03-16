@@ -11,7 +11,7 @@ interface PaginationProps {
   hasPreviousPage: boolean;
 }
 
-export const Pagination = memo(({
+const PaginationComponent = ({
   currentPage,
   totalPages,
   onPreviousPage,
@@ -149,4 +149,6 @@ export const Pagination = memo(({
       </button>
     </div>
   );
-}); 
+};
+
+export const Pagination = memo(PaginationComponent); 

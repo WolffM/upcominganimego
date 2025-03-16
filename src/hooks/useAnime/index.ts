@@ -206,7 +206,7 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
         console.log('💯 Client-side filtering complete, loading set to false');
       }
     }
-  }, [sortOption, filters, applyAllFilters]);
+  }, [sortOption, filters]);
   
   // Effect to handle client-side filter changes (genre, format, search)
   useEffect(() => {

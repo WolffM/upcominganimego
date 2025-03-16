@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Anime, UserRatingsResponse } from '@/types/anime';
 import { calculateUserPreferences } from '@/utils/userRatingsUtils';
 import { 
-  calculatePopularityScore, 
   calculateAnimePreferenceScore, 
   calculateCombinedPreferenceScore,
   AnimePreferenceScore

@@ -18,7 +18,6 @@ interface UserRatingsInputProps {
 export const UserRatingsInput = ({ 
   onRatingsLoaded, 
   onRemoveUser,
-  onClose, 
   insideModal = false,
   existingUsernames = [],
   userRatingsMap = new Map()
@@ -27,7 +26,7 @@ export const UserRatingsInput = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
+  const [, setRatingStats] = useState<RatingStats | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   
   // Clear user ratings cache when component mounts
@@ -216,7 +215,7 @@ export const UserRatingsInput = ({
             ))}
           </div>
           <p className={USER_INPUT_STYLES.INFO_TEXT}>
-            Multiple users' ratings are used to provide diverse recommendations.
+            Multiple users&apos; ratings are used to provide diverse recommendations.
             Click the info icon (i) to view detailed preferences.
           </p>
         </div>

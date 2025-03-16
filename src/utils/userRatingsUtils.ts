@@ -299,7 +299,7 @@ function extractBaseFranchiseName(title: string): string {
   const lowerTitle = title.toLowerCase();
   
   // Remove common season identifiers
-  let baseName = lowerTitle
+  const baseName = lowerTitle
     // Remove season numbers with various formats
     .replace(/\s+season\s+\d+$/i, '')
     .replace(/\s+s\d+$/i, '')

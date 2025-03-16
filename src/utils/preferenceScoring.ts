@@ -1,5 +1,5 @@
 import { Anime } from '@/types/anime';
-import { PreferenceScore, UserPreferences } from './userRatingsUtils';
+import { UserPreferences } from './userRatingsUtils';
 
 /**
  * Interface for preference scoring results on an anime

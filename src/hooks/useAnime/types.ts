@@ -1,5 +1,4 @@
 import { 
-  AnimeSeason, 
   SeasonInfo, 
   FilterOptions, 
   SortOption, 

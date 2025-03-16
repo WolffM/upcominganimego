@@ -21,8 +21,7 @@ export interface AnimeCardProps {
 }
 
 export const AnimeCard = memo(function AnimeCard({
-  anime,
-  index
+  anime
 }: AnimeCardProps) {
   const [showTrailer, setShowTrailer] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -38,6 +37,7 @@ export const AnimeCard = memo(function AnimeCard({
     setMounted(true);
 
     return () => {
+      // Cleanup function
     };
   }, [anime.id]);
 
@@ -54,7 +54,7 @@ export const AnimeCard = memo(function AnimeCard({
       }
 
       setImageError(true);
-    } catch (error) {
+    } catch (err) {
       // Set default fallback if all else fails
       setFallbackImageUrl('/images/no-image.jpg');
       setImageError(true);
@@ -79,8 +79,8 @@ export const AnimeCard = memo(function AnimeCard({
         };
         document.body.appendChild(preloadIframe);
       }
-    } catch (error) {
-      console.error('Error preloading video:', error);
+    } catch (err) {
+      console.error('Error preloading video:', err);
     }
   }, [anime]);
 
@@ -97,7 +97,7 @@ export const AnimeCard = memo(function AnimeCard({
     preloadTimeoutRef.current = setTimeout(() => {
       // Only preload if the browser is idle
       if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(preloadVideo);
+        (window as Window & typeof globalThis & { requestIdleCallback: (callback: () => void) => void }).requestIdleCallback(preloadVideo);
       } else {
         preloadVideo();
       }
@@ -165,7 +165,7 @@ Based on preferences:
   Tags: ${userScore.breakdown.tags.toFixed(1)}
               
 From public data:
-  ${userScore.breakdown.hasOwnProperty('popularity') ? `Popularity Boost: ${(userScore.breakdown as any).popularity.toFixed(1)}` : ''}`}
+  ${userScore.breakdown.hasOwnProperty('popularity') ? `Popularity Boost: ${(userScore.breakdown as { genre: number; studio: number; director: number; tags: number; popularity: number }).popularity.toFixed(1)}` : ''}`}
           >
             <FaUser className="mr-1 h-2.5 w-2.5" />
             <span className="max-w-[60px] truncate">{userScore.username}</span>
@@ -189,7 +189,7 @@ Based on user preferences:
   Tags: ${anime.preferenceScores.combined.breakdown.tags.toFixed(1)}
   
 From public data:
-  ${anime.preferenceScores.combined.breakdown.hasOwnProperty('popularity') ? `Popularity Boost: ${(anime.preferenceScores.combined.breakdown as any).popularity.toFixed(1)}` : ''}
+  ${anime.preferenceScores.combined.breakdown.hasOwnProperty('popularity') ? `Popularity Boost: ${(anime.preferenceScores.combined.breakdown as { genre: number; studio: number; director: number; tags: number; popularity: number }).popularity.toFixed(1)}` : ''}
 `}
           >
             <FaUsers className="mr-1 h-2.5 w-2.5" />

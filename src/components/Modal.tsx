@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { COMMON_STYLES } from '@/utils/uiStyles';
 
 interface ModalProps {
   isOpen: boolean;

@@ -56,7 +56,6 @@ export const UserDetails = ({ username, ratingsData }: UserDetailsProps) => {
 
   // Helper function to toggle item expansion
   const toggleExpand = (category: string, name: string, type: 'liked' | 'disliked') => {
-    const key = `${category}-${name}-${type}`;
     const isExpanded = expandedItems.some(
       item => item.category === category && item.name === name && item.type === type
     );
@@ -127,11 +126,15 @@ export const UserDetails = ({ username, ratingsData }: UserDetailsProps) => {
                 <td className="py-2 pl-1">
                   <div className="flex items-center">
                     {anime.imageUrl && (
-                      <img 
-                        src={anime.imageUrl} 
-                        alt={anime.title} 
-                        className="w-8 h-10 object-cover mr-2 rounded"
-                      />
+                      <div className="relative w-8 h-10 mr-2">
+                        <img 
+                          src={anime.imageUrl} 
+                          alt={anime.title} 
+                          className="object-cover rounded w-full h-full"
+                          width={32}
+                          height={40}
+                        />
+                      </div>
                     )}
                     <span className="text-gray-300 truncate" title={anime.title}>
                       {anime.title}
@@ -299,7 +302,7 @@ export const UserDetails = ({ username, ratingsData }: UserDetailsProps) => {
         <div className="p-4 bg-gray-800 rounded-lg text-center mb-4">
           <p className="text-yellow-400 text-sm">No preference data could be calculated.</p>
           <p className="text-gray-400 text-xs mt-2">
-            This could be because the AniList API didn't return detailed information about your rated anime.
+            This could be because the AniList API didn&apos;t return detailed information about your rated anime.
             Try refreshing by removing and re-adding your username.
           </p>
         </div>

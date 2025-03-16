@@ -1,5 +1,4 @@
 import { gql } from 'graphql-request';
-import { AnimeSeason, MAX_PAGE_SIZE, MAX_PAGES_TO_FETCH } from '@/types/anime';
 
 // GraphQL query to fetch upcoming anime with trailers
 export const UPCOMING_ANIME_QUERY = gql`

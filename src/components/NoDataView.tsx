@@ -32,10 +32,10 @@ export const NoDataView = memo(function NoDataView({
         No upcoming anime found
       </h3>
       <p className={GRID_STYLES.EMPTY_STATE_TEXT}>
-        We couldn't find any upcoming anime for <strong>{seasonTitle}</strong> with the current filters.
+        We couldn&apos;t find any upcoming anime for <strong>{seasonTitle}</strong> with the current filters.
       </p>
       <ul className={`text-left ${GRID_STYLES.EMPTY_STATE_TEXT}`}>
-        <li className={GRID_STYLES.LIST_ITEM}>• The season data hasn't been announced yet</li>
+        <li className={GRID_STYLES.LIST_ITEM}>• The season data hasn&apos;t been announced yet</li>
         <li className={GRID_STYLES.LIST_ITEM}>• Your filter combination is too restrictive</li>
         <li className={GRID_STYLES.LIST_ITEM}>• There was an issue connecting to the anime database</li>
         <li>• The API might be temporarily unavailable</li>

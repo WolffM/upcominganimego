@@ -32,10 +32,10 @@ const EmptyState = () => (
       No upcoming anime found
     </h3>
     <p className={GRID_STYLES.EMPTY_STATE_TEXT}>
-      We couldn't find any upcoming anime for the next season. This could be due to:
+      We couldn&apos;t find any upcoming anime for the next season. This could be due to:
     </p>
     <ul className={`text-left ${GRID_STYLES.EMPTY_STATE_TEXT}`}>
-      <li className={GRID_STYLES.LIST_ITEM}>• The season data hasn't been announced yet</li>
+      <li className={GRID_STYLES.LIST_ITEM}>• The season data hasn&apos;t been announced yet</li>
       <li className={GRID_STYLES.LIST_ITEM}>• There was an issue connecting to the anime database</li>
       <li>• The API might be temporarily unavailable</li>
     </ul>
@@ -74,7 +74,7 @@ const NoTrailersNotice = ({ animeCount }: { animeCount: number }) => (
     </h3>
     <p className={GRID_STYLES.NOTICE_TEXT}>
       We found {animeCount} upcoming anime, but none of them have trailers available yet. 
-      We're still displaying the anime below, but check back later for trailers!
+      We&apos;re still displaying the anime below, but check back later for trailers!
     </p>
   </div>
 );

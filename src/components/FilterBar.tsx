@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FilterOptions, ANIME_FORMATS } from '@/hooks/useAnime';
-import { AnimeSeason, getCurrentSeason, getNextSeason } from '@/services/anilistService';
-import { COMMON_STYLES } from '@/utils/uiStyles';
+import { AnimeSeason } from '@/services/anilistService';
 
 interface FilterBarProps {
   filters: FilterOptions;

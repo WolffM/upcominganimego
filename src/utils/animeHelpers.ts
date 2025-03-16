@@ -17,40 +17,34 @@ export const getBestTitle = (anime: Anime): string => {
  * @param dateParts Object containing year, month, day
  * @returns Formatted date string
  */
-export const formatAnimeDate = (dateParts: { 
-  year: number | null | undefined; 
-  month: number | null | undefined; 
-  day: number | null | undefined; 
+export const formatAnimeDate = (dateParts: {
+  year: number | null | undefined;
+  month: number | null | undefined;
+  day: number | null | undefined;
 }): string => {
   if (!dateParts.year) return 'TBA';
-  
+
   // Create compatible date parts
   const year = dateParts.year;
   const month = dateParts.month || 1;
   const day = dateParts.day || 1;
-  
-  // Format date
-  try {
-    const date = new Date(year, month - 1, day);
-    
-    // Return year only if month is unknown
-    if (!dateParts.month) return year.toString();
-    
-    // Return year and month if day is unknown
-    if (!dateParts.day) {
-      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
-    }
-    
-    // Return full date if all parts are available
-    return date.toLocaleDateString(undefined, { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  } catch (error) {
-    // Fallback for invalid dates
-    return `${year}${dateParts.month ? `-${month}` : ''}${dateParts.day ? `-${day}` : ''}`;
+
+  const date = new Date(year, month - 1, day);
+
+  // Return year only if month is unknown
+  if (!dateParts.month) return year.toString();
+
+  // Return year and month if day is unknown
+  if (!dateParts.day) {
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
   }
+
+  // Return full date if all parts are available
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 };
 
 /**
@@ -60,7 +54,7 @@ export const formatAnimeDate = (dateParts: {
  */
 export const getAnimeReleaseDate = (anime: Anime): string => {
   if (!anime.startDate) return 'TBA';
-  
+
   return formatAnimeDate({
     year: anime.startDate.year,
     month: anime.startDate.month,
@@ -86,11 +80,11 @@ export const getCleanDescription = (anime: Anime): string => {
  */
 export const getBestImageUrl = (anime: Anime, fallbackUrl?: string): string => {
   const defaultFallback = '/images/no-image.jpg';
-  
+
   if (anime.coverImage?.extraLarge) return anime.coverImage.extraLarge;
   if (anime.coverImage?.large) return anime.coverImage.large;
   if (anime.coverImage?.medium) return anime.coverImage.medium;
-  
+
   return fallbackUrl || defaultFallback;
 };
 
