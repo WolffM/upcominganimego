@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAnime, SortOption } from '@/hooks/useAnime';
 import { usePreferenceScoring } from '@/hooks/usePreferenceScoring';
 import { AnimeGrid } from '@/components/AnimeGrid';
@@ -14,7 +14,7 @@ import { UserRatingsInput } from '@/components/UserRatingsInput';
 import { Modal } from '@/components/Modal';
 import { formatSeasonTitle } from '@/utils/uiHelpers';
 import { COMMON_STYLES, PAGE_STYLES, BUTTON_STYLES } from '@/utils/uiStyles';
-import { getCacheStats, clearCache, removeUserFromCache, logStorageInfo, clearOldestCacheEntries } from '@/services/cacheService';
+import { removeUserFromCache, logStorageInfo, clearOldestCacheEntries } from '@/services/cacheService';
 import { UserRatingsResponse, Anime } from '@/types/anime';
 
 // Interface defining user data with username and ratings
@@ -26,8 +26,6 @@ interface UserData {
 export default function Home() {
   const [itemsPerPage] = useState(24);
   const [mounted, setMounted] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [cacheStats, setCacheStats] = useState({ count: 0, size: 0, keys: [] as string[] });
   
   // Store multiple users' ratings in a map
   const [userRatingsMap, setUserRatingsMap] = useState<Map<string, UserData>>(new Map());
@@ -54,7 +52,6 @@ export default function Home() {
     goToPreviousPage,
     goToPage,
     retry,
-    seasonInfo,
     sortOption,
     setSortOption,
     showPagination,
@@ -71,17 +68,6 @@ export default function Home() {
   useEffect(() => {
     console.log('🔄 Home component mounted');
     setMounted(true);
-    
-    // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        setShowDebug(prev => !prev);
-        updateCacheStats();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
   
   // Log storage info on component mount
@@ -128,18 +114,6 @@ export default function Home() {
     }
   }, []);
   
-  // Function to update cache stats
-  const updateCacheStats = () => {
-    const stats = getCacheStats();
-    setCacheStats(stats);
-  };
-  
-  // Function to clear cache
-  const handleClearCache = () => {
-    clearCache();
-    updateCacheStats();
-  };
-
   // Log when pagination state changes
   useEffect(() => {
     console.log('📄 Pagination state in Home:', { 
@@ -265,14 +239,12 @@ export default function Home() {
   }, [scoredAnime, userRatingsMap.size]);
 
   // Handle filter change
-  const handleFilterChange = (newFilters: any) => {
-    console.log('🔍 Filter options changed:', newFilters);
+  const handleFilterChange = (newFilters: Record<string, unknown>) => {
     updateFilters(newFilters);
   };
-
+  
   // Handle retry
   const handleRetry = () => {
-    console.log('🔄 Retry requested');
     retry();
   };
   

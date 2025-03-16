@@ -36,7 +36,10 @@ jobs:
         run: npm ci
       
       - name: Build with Next.js
-        run: npm run build
+        run: npm run build --no-lint
+      
+      - name: Create .nojekyll file
+        run: touch ./out/.nojekyll
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2

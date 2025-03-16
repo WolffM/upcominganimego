@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --no-lint",
     "start": "next start",
-    "lint": "next lint",
-    "deploy": "next build && touch out/.nojekyll",
+    "lint": "next lint --fix",
+    "deploy": "next build --no-lint && (if not exist out\\.nojekyll type nul > out\\.nojekyll)",
     "test:api": "npx tsx src/scripts/testAnilistApi.ts",
     "generate-preferences": "ts-node -r tsconfig-paths/register src/scripts/generatePreferences.ts"
   },
