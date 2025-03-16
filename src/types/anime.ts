@@ -73,6 +73,32 @@ export interface Anime {
   };
   // User rating information if available
   userRating?: number;
+  // Preference scores based on user ratings
+  preferenceScores?: {
+    // Individual scores by username
+    users: {
+      username: string;
+      score: number;
+      breakdown: {
+        genre: number;
+        studio: number;
+        director: number;
+        tags: number;
+      };
+    }[];
+    // Combined score across all users
+    combined: {
+      score: number;
+      breakdown: {
+        genre: number;
+        studio: number;
+        director: number;
+        tags: number;
+      };
+    };
+    // Raw popularity score (logarithmic scale capped at 100)
+    popularityScore: number;
+  };
 }
 
 // API response interfaces
@@ -99,6 +125,10 @@ export interface UserRatingEntry {
   mediaId: number;
   score: number;
   media: Anime;
+  user?: {
+    name: string;
+    id: number;
+  };
 }
 
 export interface UserRatingsResponse {
@@ -178,6 +208,8 @@ export enum AnimeSeason {
 export enum SortOption {
   POPULARITY = 'popularity',
   RELEASE_DATE = 'releaseDate',
+  COMBINED_PREFERENCE = 'combinedPreference',
+  USER_PREFERENCE_PREFIX = 'userPreference:'
 }
 
 // User ratings statistics interface

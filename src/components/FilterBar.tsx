@@ -115,17 +115,8 @@ export const FilterBar = ({
   // Determine if controls should be disabled
   const isDisabled = localLoading || isLoading;
   
-  // Log render state
-  console.log('🔄 FilterBar rendering with states:', { 
-    isLoading, 
-    localLoading, 
-    isDisabled,
-    filters
-  });
-  
   // Debug the genre dropdown value
   const genreDropdownValue = filters.genre || 'all';
-  console.log('🔄 FilterBar: Genre dropdown value:', genreDropdownValue, 'from filters.genre:', filters.genre);
   
   return (
     <div className="w-full bg-gray-800 p-4 rounded-lg shadow-md mb-6">

@@ -21,7 +21,7 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
   const [error, setError] = useState<Error | null>(null);
   const [page, setPage] = useState<number>(initialPage);
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>(SortOption.POPULARITY);
+  const [sortOption, setSortOption] = useState<SortOption | string>(SortOption.POPULARITY);
   const [filteredList, setFilteredList] = useState<boolean>(false);
   
   // Filter state
@@ -163,9 +163,50 @@ export const useAnime = (initialPage = 1, perPage = 20) => {
     if (originalAnimeRef.current.length > 0) {
       console.log('🔄 Re-sorting anime list with option:', sortOption);
       setLoading(true);
-      applyClientFiltersAndUpdateState();
+      
+      // Force the original data to be used for sorting to ensure we get all the anime
+      // properly sorted when the sort option changes
+      const animeToSort = [...originalAnimeRef.current];
+      
+      // Apply client-side filters and update state
+      try {
+        // Apply client-side filters
+        const filteredAnime = applyAllFilters(
+          animeToSort,
+          filters,
+          sortOption
+        );
+        
+        // Update state
+        setAnime(filteredAnime);
+        setFilteredList(true);
+        
+        // Log number of anime after sorting
+        console.log(`🔢 After sorting with ${sortOption}, have ${filteredAnime.length} anime`);
+        
+        // If sorting by preference score, check that scores exist
+        if (sortOption === 'combinedPreference') {
+          const withScores = filteredAnime.filter(a => a.preferenceScores?.combined?.score !== undefined).length;
+          console.log(`🔢 Anime with combined preference scores: ${withScores}/${filteredAnime.length}`);
+        } else if (typeof sortOption === 'string' && sortOption.startsWith('userPreference:')) {
+          const username = sortOption.substring('userPreference:'.length);
+          const withScores = filteredAnime.filter(a => {
+            if (!a.preferenceScores?.users) return false;
+            return a.preferenceScores.users.some(u => 
+              u.username.toLowerCase() === username.toLowerCase() &&
+              u.score !== undefined
+            );
+          }).length;
+          console.log(`🔢 Anime with scores for user ${username}: ${withScores}/${filteredAnime.length}`);
+        }
+      } catch (error) {
+        console.error('❌ Error applying client-side filters:', error);
+      } finally {
+        setLoading(false);
+        console.log('💯 Client-side filtering complete, loading set to false');
+      }
     }
-  }, [sortOption, applyClientFiltersAndUpdateState]);
+  }, [sortOption, filters, applyAllFilters]);
   
   // Effect to handle client-side filter changes (genre, format, search)
   useEffect(() => {

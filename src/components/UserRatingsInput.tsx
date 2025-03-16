@@ -1,21 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { USER_INPUT_STYLES } from '@/utils/uiStyles';
 import { fetchUserRatedAnimeByName } from '@/services/anilistService';
 import { UserRatingsResponse } from '@/types/anime';
 import { calculateRatingStats, type RatingStats } from '@/utils/userRatingsUtils';
+import { UserDetails } from './UserDetails';
+import { clearUserRatingsCache } from '@/services/cacheService';
 
 interface UserRatingsInputProps {
   onRatingsLoaded: (ratings: UserRatingsResponse) => void;
+  onRemoveUser?: (username: string) => void;
   onClose?: () => void;
   insideModal?: boolean;
+  existingUsernames?: string[];
+  userRatingsMap?: Map<string, { username: string; ratings: UserRatingsResponse }>;
 }
 
-export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false }: UserRatingsInputProps) => {
+export const UserRatingsInput = ({ 
+  onRatingsLoaded, 
+  onRemoveUser,
+  onClose, 
+  insideModal = false,
+  existingUsernames = [],
+  userRatingsMap = new Map()
+}: UserRatingsInputProps) => {
   const [username, setUsername] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  
+  // Clear user ratings cache when component mounts
+  useEffect(() => {
+    // This ensures we'll fetch fresh data with the updated GraphQL query
+    // that includes studios, staff, and tags
+    clearUserRatingsCache();
+    console.log('🧹 Cleared user ratings cache to ensure fresh data with updated query');
+  }, []);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(e.target.value);
@@ -55,15 +76,28 @@ export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false
         return;
       }
       
+      // Set the username on all ratings entries to ensure we can identify them later
+      ratingsData.data.Page.mediaList.forEach(entry => {
+        if (!entry.user) {
+          entry.user = {
+            name: username,
+            id: 0 // Default ID if not available
+          };
+        }
+      });
+      
       // Calculate stats using our utility function
       const stats = calculateRatingStats(ratingsData);
       setRatingStats(stats);
       
       // Success path - we have ratings
-      setSuccess(`Successfully loaded ${ratingCount} rated anime from your AniList profile.`);
+      setSuccess(`Successfully loaded ${ratingCount} rated anime from the AniList profile for ${username}.`);
       
       // Call the onRatingsLoaded callback with the data
       onRatingsLoaded(ratingsData);
+      
+      // Clear the input field after successful submission
+      setUsername('');
       
       // Note: We've removed the automatic dialog closing as requested
     } catch (err: any) {
@@ -98,6 +132,28 @@ export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false
     setRatingStats(null);
   };
   
+  // Handle removing a user
+  const handleRemoveUser = (username: string) => {
+    if (onRemoveUser) {
+      // If we're currently viewing details for this user, close the details
+      if (selectedUser === username) {
+        setSelectedUser(null);
+      }
+      
+      onRemoveUser(username);
+      setSuccess(`Removed user ${username} from loaded ratings.`);
+    }
+  };
+  
+  // Toggle user details view
+  const toggleUserDetails = (username: string) => {
+    if (selectedUser === username) {
+      setSelectedUser(null);
+    } else {
+      setSelectedUser(username);
+    }
+  };
+  
   const content = (
     <>
       {!insideModal && (
@@ -109,18 +165,75 @@ export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false
         </div>
       )}
       
+      {/* Display existing users if we have any */}
+      {existingUsernames && existingUsernames.length > 0 && (
+        <div className={USER_INPUT_STYLES.USERS_CONTAINER}>
+          <h3 className={USER_INPUT_STYLES.SECTION_TITLE}>Loaded Users</h3>
+          <div className={USER_INPUT_STYLES.USERS_LIST}>
+            {existingUsernames.map((name) => (
+              <div key={name}>
+                <div className={USER_INPUT_STYLES.USER_ITEM}>
+                  <span className={USER_INPUT_STYLES.USERNAME}>{name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">✓ Loaded</span>
+                    
+                    {/* Info button */}
+                    <button
+                      type="button"
+                      onClick={() => toggleUserDetails(name)}
+                      className={`text-blue-400 hover:text-blue-300 text-sm transition-colors ${selectedUser === name ? 'text-blue-300' : ''}`}
+                      title="View user preferences"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveUser(name)}
+                      className="text-red-400 hover:text-red-300 text-sm ml-2 transition-colors"
+                      title="Remove user data"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                {/* User Details Panel - show when this user is selected */}
+                {selectedUser === name && userRatingsMap.has(name) && (
+                  <div className="mt-6 mb-6 w-full overflow-hidden bg-gray-900 rounded-lg">
+                    <UserDetails 
+                      username={name} 
+                      ratingsData={userRatingsMap.get(name)!.ratings}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className={USER_INPUT_STYLES.INFO_TEXT}>
+            Multiple users' ratings are used to provide diverse recommendations.
+            Click the info icon (i) to view detailed preferences.
+          </p>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className={USER_INPUT_STYLES.FORM}>
         <div className={USER_INPUT_STYLES.FIELD_ROW}>
           <div className={USER_INPUT_STYLES.INPUT_GROUP}>
             <label htmlFor="anilist-username" className={USER_INPUT_STYLES.LABEL}>
-              AniList Username
+              {existingUsernames.length > 0 ? 'Add Another AniList User' : 'AniList Username'}
             </label>
             <input
               id="anilist-username"
               type="text"
               value={username}
               onChange={handleInputChange}
-              placeholder="Enter your AniList username or profile URL"
+              placeholder="Enter an AniList username or profile URL"
               disabled={isLoading}
               className={USER_INPUT_STYLES.INPUT}
             />
@@ -135,7 +248,7 @@ export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false
             disabled={isLoading || !username}
             className={USER_INPUT_STYLES.BUTTON}
           >
-            {isLoading ? 'Loading...' : 'Load Ratings'}
+            {isLoading ? 'Loading...' : 'Load User Ratings'}
           </button>
           
           {username && (
@@ -148,59 +261,20 @@ export const UserRatingsInput = ({ onRatingsLoaded, onClose, insideModal = false
               Clear
             </button>
           )}
-          
-          {!isLoading && ratingStats && (
-            <button
-              type="button"
-              onClick={onClose}
-              className={USER_INPUT_STYLES.BUTTON}
-            >
-              Continue
-            </button>
-          )}
         </div>
         
         <p className={USER_INPUT_STYLES.INFO_TEXT}>
-          Enter your AniList username or paste your full profile URL.
+          Enter an AniList username or paste a full profile URL.
           <br />
           Examples: <strong>username</strong>, <strong>@username</strong>, or <strong>https://anilist.co/user/username/</strong>
           <br />
-          <span className="text-indigo-300">Make sure your anime list is set to public in AniList privacy settings.</span>
+          <span className="text-indigo-300">Make sure the anime list is set to public in AniList privacy settings.</span>
         </p>
       </form>
       
       {isLoading && (
         <div className={USER_INPUT_STYLES.LOADING}>
-          Looking up your ratings from AniList...
-        </div>
-      )}
-      
-      {ratingStats && (
-        <div className={USER_INPUT_STYLES.STATS_CONTAINER}>
-          <h3 className={USER_INPUT_STYLES.STATS_TITLE}>Rating Statistics</h3>
-          <div className={USER_INPUT_STYLES.STATS_GRID}>
-            <div>
-              <p className={USER_INPUT_STYLES.STATS_VALUE}>
-                <span className={USER_INPUT_STYLES.STATS_LABEL}>Total Ratings:</span> {ratingStats.count}
-              </p>
-              <p className={USER_INPUT_STYLES.STATS_VALUE}>
-                <span className={USER_INPUT_STYLES.STATS_LABEL}>Average Score:</span> {ratingStats.averageScore.toFixed(1)}
-              </p>
-            </div>
-            <div>
-              <p className={USER_INPUT_STYLES.STATS_LABEL}>Top Genres:</p>
-              <div className={USER_INPUT_STYLES.STATS_VALUE}>
-                {ratingStats.preferredGenres.map((genre: {genre: string; count: number}, index: number) => (
-                  <span key={index} className={USER_INPUT_STYLES.STATS_VALUE}>
-                    {genre.genre} ({genre.count})
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <p className={USER_INPUT_STYLES.STATS_FOOTER}>
-            Recommendations will be personalized based on these ratings.
-          </p>
+          Looking up ratings from AniList...
         </div>
       )}
     </>

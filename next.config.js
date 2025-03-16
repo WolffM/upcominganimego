@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'export', // Enable static exports for GitHub Pages
+  basePath: process.env.NODE_ENV === 'production' ? '/upcominganimego' : '', // Set the base path for GitHub Pages
   images: {
+    unoptimized: true, // Required for static export
     domains: [
       // AniList CDN domains
       's4.anilist.co',

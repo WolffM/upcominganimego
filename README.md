@@ -43,6 +43,32 @@ A web application that displays upcoming anime releases with trailers, built wit
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Deployment
+
+This project is configured for automatic deployment to GitHub Pages using GitHub Actions.
+
+### How to Deploy
+
+1. Push your changes to the main branch:
+   ```bash
+   git add .
+   git commit -m "Your commit message"
+   git push origin main
+   ```
+
+2. The GitHub Actions workflow will automatically build and deploy the application to GitHub Pages.
+
+3. Your application will be available at `https://yourusername.github.io/upcominganimego/`
+
+### Manual Deployment
+
+You can also manually trigger the deployment workflow:
+
+1. Go to your GitHub repository
+2. Navigate to Actions tab
+3. Select the "Deploy to GitHub Pages" workflow
+4. Click "Run workflow"
+
 ## Technologies Used
 
 - **Next.js**: React framework for server-rendered applications

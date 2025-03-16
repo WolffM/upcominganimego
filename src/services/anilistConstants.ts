@@ -148,6 +148,33 @@ export const USER_RATINGS_QUERY = gql`
           episodes
           duration
           genres
+          tags {
+            id
+            name
+            description
+            category
+            rank
+            isGeneralSpoiler
+            isMediaSpoiler
+            isAdult
+          }
+          studios {
+            nodes {
+              id
+              name
+            }
+          }
+          staff {
+            edges {
+              role
+              node {
+                id
+                name {
+                  full
+                }
+              }
+            }
+          }
           averageScore
           popularity
           startDate {
