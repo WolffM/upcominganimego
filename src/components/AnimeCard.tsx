@@ -12,7 +12,7 @@ import {
   getTopGenres
 } from '@/utils/animeHelpers';
 import { getPreferenceScoreBadgeClass } from '@/utils/preferenceScoring';
-import { FaStar, FaInfoCircle, FaPlay, FaCalendarAlt, FaUser, FaUsers } from 'react-icons/fa';
+import { FaStar, FaInfoCircle, FaPlay, FaCalendarAlt, FaUser, FaUsers, FaExternalLinkAlt } from 'react-icons/fa';
 import { COMMON_STYLES, CARD_STYLES } from '@/utils/uiStyles';
 
 export interface AnimeCardProps {
@@ -140,6 +140,11 @@ export const AnimeCard = memo(function AnimeCard({
   // Determine format badge style based on format
   const getFormatBadgeStyle = () => {
     return CARD_STYLES.FORMAT_BADGE;
+  };
+
+  // Construct AniList URL for the anime
+  const getAnilistUrl = () => {
+    return `https://anilist.co/anime/${anime.id}`;
   };
 
   // Render the preference score badges
@@ -291,7 +296,15 @@ From public data:
       {/* Anime Info */}
       <div className={CARD_STYLES.INFO_CONTAINER}>
         <h3 className={CARD_STYLES.TITLE}>
-          {title}
+          <a 
+            href={getAnilistUrl()} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center hover:text-blue-400 transition-colors"
+          >
+            {title}
+            <FaExternalLinkAlt className="ml-2 h-3 w-3 opacity-70" />
+          </a>
         </h3>
 
         {/* Release Date and Popularity - Evenly Distributed */}
