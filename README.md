@@ -1,6 +1,7 @@
 # Upcoming Anime Go
 
 A web application that displays upcoming anime releases with trailers, built with Next.js, TypeScript, and Tailwind CSS.
+Live here: https://wolffm.github.io/upcominganimego/
 
 ## Features
 
