@@ -25,34 +25,62 @@ export function getCurrentSeason(): { season: AnimeSeason; year: number } {
 }
 
 /**
+ * Get the default upcoming season to show.
+ *
+ * We keep showing the current season until roughly halfway through it,
+ * then switch to the following season. This avoids jumping too early,
+ * e.g. showing Fall immediately when Summer begins.
+ *
+ * @returns Object containing default season and year
+ */
+export function getDefaultSeason(): { season: AnimeSeason; year: number } {
+  const shiftedDate = new Date();
+  shiftedDate.setMonth(shiftedDate.getMonth() - 2);
+
+  const month = shiftedDate.getMonth() + 1; // JavaScript months are 0-indexed
+  const year = shiftedDate.getFullYear();
+
+  let season: AnimeSeason;
+  if (month >= 3 && month <= 5) {
+    season = AnimeSeason.SPRING;
+  } else if (month >= 6 && month <= 8) {
+    season = AnimeSeason.SUMMER;
+  } else if (month >= 9 && month <= 11) {
+    season = AnimeSeason.FALL;
+  } else {
+    season = AnimeSeason.WINTER;
+  }
+
+  let defaultSeason: AnimeSeason;
+  let defaultYear = year;
+
+  switch (season) {
+    case AnimeSeason.WINTER:
+      defaultSeason = AnimeSeason.SPRING;
+      break;
+    case AnimeSeason.SPRING:
+      defaultSeason = AnimeSeason.SUMMER;
+      break;
+    case AnimeSeason.SUMMER:
+      defaultSeason = AnimeSeason.FALL;
+      break;
+    case AnimeSeason.FALL:
+      defaultSeason = AnimeSeason.WINTER;
+      defaultYear = year + 1;
+      break;
+    default:
+      defaultSeason = AnimeSeason.SPRING;
+  }
+
+  return { season: defaultSeason, year: defaultYear };
+}
+
+/**
  * Get next anime season after the current one
  * @returns Object containing next season and year
  */
 export function getNextSeason(): { season: AnimeSeason; year: number } {
-  const { season, year } = getCurrentSeason();
-  
-  let nextSeason: AnimeSeason;
-  let nextYear = year;
-  
-  switch (season) {
-    case AnimeSeason.WINTER:
-      nextSeason = AnimeSeason.SPRING;
-      break;
-    case AnimeSeason.SPRING:
-      nextSeason = AnimeSeason.SUMMER;
-      break;
-    case AnimeSeason.SUMMER:
-      nextSeason = AnimeSeason.FALL;
-      break;
-    case AnimeSeason.FALL:
-      nextSeason = AnimeSeason.WINTER;
-      nextYear = year + 1;
-      break;
-    default:
-      nextSeason = AnimeSeason.SPRING;
-  }
-  
-  return { season: nextSeason, year: nextYear };
+  return getDefaultSeason();
 }
 
 /**
