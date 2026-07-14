@@ -21,11 +21,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      # No `version:` input - action-setup reads pnpm from package.json's
+      # `packageManager` field (single source of truth; specifying both errors).
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: 'npm'
+          cache: 'pnpm'
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -33,10 +38,10 @@ jobs:
           static_site_generator: next
       
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       
       - name: Build with Next.js
-        run: npm run build --no-lint
+        run: pnpm run build
       
       - name: Create .nojekyll file
         run: touch ./out/.nojekyll
