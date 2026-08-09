@@ -27,8 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: 'pnpm'
-
       # pnpm via corepack, pinned by the `packageManager` field in package.json.
       # Replaces pnpm/action-setup, whose self-installer shares one directory
       # across every runner instance on the host and dies with
