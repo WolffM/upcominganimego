@@ -20,18 +20,20 @@ year; you can't browse an arbitrary date range.
 
 ## Personalized ranking
 
-**What it does.** Enter one or more AniList usernames, and every anime in
-the list gets a score built from that account's (or those accounts')
-actual rating history: how much they've liked that genre, that studio,
-that director, those tags in the past, averaged and combined, plus a
-dampened popularity boost so one runaway hit can't swamp a personal
-preference. Give more than one username and the site also shows a
-combined score averaged across all of them.
+**What it does.** Enter one or more AniList usernames. Every anime in the
+list gets a score built from that account's (or those accounts') actual
+rating history: how much they've liked that genre, that studio, that
+director, and those tags in the past, averaged and combined. A dampened
+popularity boost is added on top, so one runaway hit can't swamp a
+personal preference. Give more than one username and the site also shows
+a combined score averaged across all of them.
 
-**How to use it.** Add an AniList username (`UserDetails.tsx`); the site
-fetches that account's rating history from AniList and recalculates every
-score. Preferences are cached per username so a repeat visit doesn't
-re-fetch and re-crunch the same rating history (`src/services/cacheService.ts`).
+**How to use it.** Click "Load User Data" above the grid to open the
+username form, enter an AniList username, and submit "Load User Ratings";
+the site fetches that account's rating history from AniList and
+recalculates every score. Preferences are cached per
+username so a repeat visit doesn't re-fetch and re-crunch the same rating
+history (`src/services/cacheService.ts`).
 
 **What it does not do.** The popularity component is deliberately
 *logarithmic*, not linear — capped and curved so it grows quickly for a
@@ -45,7 +47,9 @@ personal score just by being popular
 popularity, or release date; filter the list down by criteria in the
 filter bar.
 
-**How to use it.** `SortSelector` and `FilterBar`, above the grid.
+**How to use it.** The "Sort by" dropdown (Popularity, Release Date, or a
+loaded user's preference) sits above the grid, next to a filter bar with
+a text search and dropdowns for genre, format, year and season.
 
 ## Image fallback
 
@@ -53,12 +57,12 @@ filter bar.
 for something unannounced far enough ahead), the site tries to find one
 rather than showing a broken image.
 
-**How to use it.** Automatic. It tries, in order: a search against the
-Jikan (MyAnimeList) API for the exact title; if the title looks like a
-sequel ("Season 2", "Part 3", a trailing numeral or ordinal), a second
-Jikan search for the base title with the sequel marker stripped, on the
-theory that a sequel often reuses its predecessor's key art; and finally a
-season-appropriate generic placeholder if neither search turns up anything
+**How to use it.** Automatic. It first searches the Jikan (MyAnimeList)
+API for the exact title. If the title looks like a sequel ("Season 2",
+"Part 3", a trailing numeral or ordinal), it searches Jikan again for the
+base title with the sequel marker stripped, on the theory that a sequel
+often reuses its predecessor's key art. If neither search turns up
+anything, it falls back to a season-appropriate generic placeholder
 (`getFallbackImageUrl`, `src/utils/imageFallbacks.ts`).
 
 **What it does not do.** The sequel detection is pattern-based (looking for

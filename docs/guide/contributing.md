@@ -53,12 +53,12 @@ is no separate `check` job.
 `.github/workflows/deploy.yml` builds the static export and publishes it
 to GitHub Pages on every push to `main`, or by hand via
 `workflow_dispatch`. It deliberately runs on a GitHub-hosted runner, not
-the account's self-hosted fleet: a comment in the workflow explains why —
+the account's self-hosted fleet. A comment in the workflow explains why:
 this repo isn't registered in the account's fleet-coverage config and has
 no runner that could ever pick the job up, so the self-hosted label would
-just queue forever (see [history](history.md#the-nineteen-minute-experiment)
-for the time this was tried anyway). pnpm itself comes from Corepack, read
-from `package.json`'s own `packageManager` field rather than a pinned
+just queue forever. [History](history.md#the-nineteen-minute-experiment)
+covers the time this was tried anyway. pnpm itself comes from Corepack,
+read from `package.json`'s own `packageManager` field rather than a pinned
 action input, so there is exactly one place the version can drift from.
 
 ## Trivia

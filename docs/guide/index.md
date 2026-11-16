@@ -33,6 +33,10 @@ should *you* actually watch? It pulls the season's anime from the
 username, re-ranks the list against that account's own rating history
 instead of leaving you with AniList's raw popularity order.
 
+![The season browser: a filter bar for search, genre, format, year and
+season, above a grid of anime cards with cover art, ratings and
+genres](images/season-browser.webp)
+
 - [Features](features.md): browsing, personalized ranking, and the
   fallback-image system.
 - [Contributing](contributing.md): running it locally, the layout, how it
@@ -43,8 +47,8 @@ instead of leaving you with AniList's raw popularity order.
 
 ## Trivia
 
-Ranking is never just "what's popular": a user's actual AniList rating
+Ranking is never just "what's popular." A user's actual AniList rating
 history is scored genre by genre, studio by studio and tag by tag against
-every upcoming anime, and only then blended with a (deliberately
-dampened, logarithmic) popularity boost so one runaway hit can't swamp
+every upcoming anime. Only then is it blended with a deliberately
+dampened, logarithmic popularity boost, so one runaway hit can't swamp
 everything else ([features](features.md#personalized-ranking)).
