@@ -1,5 +1,7 @@
 # Upcoming Anime Go
 
+**Guide:** [overview](docs/guide/index.md) · [features](docs/guide/features.md) · [contributing](docs/guide/contributing.md) · [history](docs/guide/history.md) · [trivia](docs/guide/trivia.md)
+
 A web application that displays upcoming anime releases with trailers, built with Next.js, TypeScript, and Tailwind CSS.
 
 Live here: https://wolffm.github.io/upcominganimego/
